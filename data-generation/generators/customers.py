@@ -2,7 +2,7 @@
 Generates realistic customer data from the parameters in settings.py
 """
 
-from seed_data.config.settings import NUM_CUSTOMERS, START_DATE, END_DATE, COUNTRIES
+from config.settings import NUM_CUSTOMERS, START_DATE, END_DATE, COUNTRIES
 from datetime import datetime, timedelta
 from faker import Faker
 import pandas as pd
@@ -150,6 +150,7 @@ def generate_customers(num_customers=NUM_CUSTOMERS):
         phone = _generate_unique_phone(fake_local)
         address = _generate_unique_address_for_postcode(country, postcode, fake_local)
         
+        signup_date_str = signup_date.strftime('%Y-%m-%d %H:%M:%S')
         customer = {
             'customer_id': i,
             'first_name': fake_local.first_name(),
@@ -161,7 +162,9 @@ def generate_customers(num_customers=NUM_CUSTOMERS):
             'state': location['state'],
             'postal_code': postcode,
             'address': address,
-            'signup_date': signup_date.strftime('%Y-%m-%d %H:%M:%S'),
+            'signup_date': signup_date_str,
+            'created_at': signup_date_str,
+            'updated_at': signup_date_str,  # Will be updated when segment changes during order generation
             'customer_segment': None,  # Will be calculated after orders are generated
             'date_of_birth': fake.date_of_birth(minimum_age=18, maximum_age=80).strftime('%Y-%m-%d'),
             'gender': random.choice(['M', 'F', 'Other', None])

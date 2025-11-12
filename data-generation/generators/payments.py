@@ -2,7 +2,7 @@
 Generates realistic payment data from orders
 """
 
-from seed_data.config.settings import PAYMENT_METHODS, CARD_BRANDS, PAYMENT_STATUSES, REFUND_RATE
+from config.settings import PAYMENT_METHODS, CARD_BRANDS, PAYMENT_STATUSES, REFUND_RATE
 from datetime import datetime, timedelta
 import pandas as pd
 import random
@@ -45,6 +45,7 @@ def generate_payments(orders_df):
         payment_date_str = order['payment_date']
         customer_id = order['customer_id']
         order_id = order['order_id']
+        delivered_date_str = order.get('delivered_date')
         
         # Determine card_brand if payment_method is credit_card
         card_brand = None
@@ -63,6 +64,19 @@ def generate_payments(orders_df):
             if random.random() < REFUND_RATE:
                 final_payment_status = 'refunded'
         
+        # Calculate created-at and updated-at timestamps
+        created_at = payment_date_str
+        
+        # Calculate updated-at based on payment status
+        if final_payment_status == 'refunded' and delivered_date_str:
+            # Refund processed 5-30 days after delivery
+            delivered_date = datetime.strptime(delivered_date_str, '%Y-%m-%d %H:%M:%S')
+            refund_days = random.randint(5, 30)
+            updated_at = (delivered_date + timedelta(days=refund_days)).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            # For completed or failed, updated_at same as payment_date
+            updated_at = payment_date_str
+        
         payment = {
             'payment-id': payment_id,
             'order-id': order_id,
@@ -73,6 +87,8 @@ def generate_payments(orders_df):
             'amount': amount,
             'payment-status': final_payment_status,
             'payment-date': payment_date_str,
+            'created-at': created_at,
+            'updated-at': updated_at,
         }
         
         payments.append(payment)

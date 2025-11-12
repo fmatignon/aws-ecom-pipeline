@@ -2,7 +2,7 @@
 Generates realistic shipment data from orders
 """
 
-from seed_data.config.settings import CARRIERS, AVG_DELIVERY_TIME
+from config.settings import CARRIERS, AVG_DELIVERY_TIME
 from datetime import datetime, timedelta
 import pandas as pd
 import random
@@ -163,6 +163,22 @@ def generate_shipments(orders_df, order_items_df=None, customers_df=None):
         # Determine shipment status
         shipment_status = _calculate_shipment_status(shipment_date, delivered_date, current_date)
         
+        # Calculate updated-at based on shipment status
+        if shipment_status == 'delivered' and delivered_date:
+            # Delivered: use actual_delivery_date
+            updated_at = delivered_date_str
+        elif shipment_status == 'exception' and estimated_delivery_date:
+            # Exception: detected after estimated delivery date
+            days_overdue = max(1, (current_date - estimated_delivery_date).days)
+            exception_detection_days = random.randint(1, min(7, days_overdue))
+            updated_at = (estimated_delivery_date + timedelta(days=exception_detection_days)).strftime('%Y-%m-%d %H:%M:%S')
+        elif shipment_date:
+            # In transit or pending: use shipment_date
+            updated_at = shipment_date_str
+        else:
+            # No shipment date yet
+            updated_at = None
+        
         shipment = {
             'tracking_number': tracking_number_id,
             'tracking_code': tracking_number,  # Human-readable tracking number
@@ -173,10 +189,11 @@ def generate_shipments(orders_df, order_items_df=None, customers_df=None):
             'destination_postal_code': destination_postal_code,
             'status': shipment_status,
             'shipping_cost': shipping_cost,
-            'shipment_date': shipment_date_str,
-            'estimated_delivery_date': estimated_delivery_date.strftime('%Y-%m-%d %H:%M:%S') if estimated_delivery_date else None,
-            'actual_delivery_date': delivered_date_str,
-            'created_at': shipment_date_str if shipment_date_str else None,
+            'shipment-date': shipment_date_str,
+            'estimated-delivery-date': estimated_delivery_date.strftime('%Y-%m-%d %H:%M:%S') if estimated_delivery_date else None,
+            'actual-delivery-date': delivered_date_str,
+            'created-at': shipment_date_str if shipment_date_str else None,
+            'updated-at': updated_at,
         }
         
         shipments.append(shipment)

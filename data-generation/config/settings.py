@@ -3,14 +3,23 @@ Configuration settings for data generation
 """
 from datetime import datetime, timedelta
 
-# Generation volumes
-NUM_CUSTOMERS = 120000  # Increased to reduce orders per customer (more realistic distribution)
-NUM_PRODUCTS = int(NUM_CUSTOMERS / 20)
-NUM_ORDERS = int(NUM_CUSTOMERS * 3.75)
+# Time range for simulation (in days)
+TIME_RANGE = 540  # 18 months of activity
 
-# Date ranges
-START_DATE = datetime.now() - timedelta(days=540)  # 18 months ago
+# Calculate date ranges from TIME_RANGE
 END_DATE = datetime.now()
+START_DATE = END_DATE - timedelta(days=TIME_RANGE)
+
+# Generation volumes (proportional to TIME_RANGE)
+# Base rates per day (calculated from current 540-day values)
+CUSTOMERS_PER_DAY = 200
+PRODUCTS_PER_DAY = 10
+ORDERS_PER_DAY = 800
+
+# Total volumes for the simulation period
+NUM_CUSTOMERS = int(CUSTOMERS_PER_DAY * TIME_RANGE)
+NUM_PRODUCTS = int(PRODUCTS_PER_DAY * TIME_RANGE)
+NUM_ORDERS = int(ORDERS_PER_DAY * TIME_RANGE)
 
 # Business logic constants
 ORDER_SUCCESS_RATE = 0.95  # 95% of orders complete successfully

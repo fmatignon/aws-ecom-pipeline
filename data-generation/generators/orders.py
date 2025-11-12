@@ -2,7 +2,7 @@
 Generates realistic order data with business logic from settings.py
 """
 
-from seed_data.config.settings import (
+from config.settings import (
     NUM_ORDERS, END_DATE, ORDER_SUCCESS_RATE,
     REFUND_RATE, CARRIERS, PAYMENT_METHODS, COUNTRIES, CUSTOMER_SEGMENTS,
     PAYMENT_STATUSES, DISCOUNT_USAGE_RATE,
@@ -217,10 +217,22 @@ def _apply_refund_logic(order_status, payment_status, order_date):
     return order_status, payment_status
 
 
-def _select_products_with_preferences(products_df, customer_category_prefs, customer_id, num_items):
+def _select_products_with_preferences(products_df, customer_category_prefs, customer_id, num_items, order_date):
     """
     Select products based on customer's category preferences
+    Ensures products existed at order time (created_at <= order_date)
     """
+    # Filter products to only those that existed at order time
+    # Convert created_at strings to datetime for comparison
+    products_df_copy = products_df.copy()
+    products_df_copy['created_at_dt'] = pd.to_datetime(products_df_copy['created_at'])
+    available_products_df = products_df_copy[products_df_copy['created_at_dt'] <= order_date].copy()
+    available_products_df = available_products_df.drop(columns=['created_at_dt'])
+    
+    # If no products available, fall back to all products (shouldn't happen in normal operation)
+    if len(available_products_df) == 0:
+        available_products_df = products_df.copy()
+    
     # Get customer's preferred categories
     preferred_categories = customer_category_prefs.get(customer_id, {})
     
@@ -236,17 +248,17 @@ def _select_products_with_preferences(products_df, customer_category_prefs, cust
             preferred_category = random.choices(categories, weights=weights)[0]
             
             # Get products from this category
-            category_products = products_df[products_df['category'] == preferred_category]
+            category_products = available_products_df[available_products_df['category'] == preferred_category]
             if len(category_products) > 0:
                 product_id = random.choice(category_products['product_id'].values)
                 selected_products.append(product_id)
             else:
-                # Fallback: select from all products
-                product_id = random.choice(products_df['product_id'].values)
+                # Fallback: select from all available products
+                product_id = random.choice(available_products_df['product_id'].values)
                 selected_products.append(product_id)
         else:
-            # Select from any category
-            product_id = random.choice(products_df['product_id'].values)
+            # Select from any available category
+            product_id = random.choice(available_products_df['product_id'].values)
             selected_products.append(product_id)
     
     # Ensure uniqueness (no duplicate products in same order)
@@ -254,7 +266,7 @@ def _select_products_with_preferences(products_df, customer_category_prefs, cust
     
     # If we removed duplicates, we may have fewer items, so add more
     while len(selected_products) < num_items:
-        product_id = random.choice(products_df['product_id'].values)
+        product_id = random.choice(available_products_df['product_id'].values)
         if product_id not in selected_products:
             selected_products.append(product_id)
     
@@ -306,6 +318,11 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
     # Track customer category preferences and order history
     customer_category_prefs = {}
     customer_order_history = defaultdict(list)
+    
+    # Track customer segments to detect changes and update updated_at
+    customer_segments = {}  # customer_id -> current_segment
+    for customer_id in customers_dict.keys():
+        customer_segments[customer_id] = None  # Initialize to None
     
     orders = []
     order_items = []
@@ -399,7 +416,7 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
         num_items = random.choices(items, weights=weights)[0]
         
         selected_products = _select_products_with_preferences(
-            products_df, customer_category_prefs, customer_id, num_items
+            products_df, customer_category_prefs, customer_id, num_items, order_date
         )
         
         # Update category preferences based on purchase
@@ -421,7 +438,8 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
                 'product_id': product_id,
                 'quantity': quantity,
                 'unit_price': unit_price,
-                'line_total': line_total
+                'line_total': line_total,
+                'created_at': order_date.strftime('%Y-%m-%d %H:%M:%S')
             })
         
         subtotal = round(subtotal, 2)
@@ -431,6 +449,13 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
             customer_id, order_date, signup_date, 
             customer_order_history[customer_id], vip_subscribers
         )
+        
+        # Update customer updated_at if segment changed
+        previous_segment = customer_segments.get(customer_id)
+        if previous_segment != segment:
+            # Segment changed, update customer's updated_at
+            customers_dict[customer_id]['updated_at'] = order_date.strftime('%Y-%m-%d %H:%M:%S')
+            customer_segments[customer_id] = segment
         
         # Calculate discount based on actual segment at order time
         # Use order_id as seed for consistent discount application
@@ -470,13 +495,30 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
             tracking_number_counter += 1
         
         # Create order record
+        order_date_str = order_date.strftime('%Y-%m-%d %H:%M:%S')
+        payment_date_str = payment_date.strftime('%Y-%m-%d %H:%M:%S') if payment_date else None
+        shipment_date_str = shipment_date.strftime('%Y-%m-%d %H:%M:%S') if shipment_date else None
+        delivered_date_str = delivered_date.strftime('%Y-%m-%d %H:%M:%S') if delivered_date else None
+        
+        # Calculate updated_at as latest of all event dates
+        event_dates = [order_date]
+        if payment_date:
+            event_dates.append(payment_date)
+        if shipment_date:
+            event_dates.append(shipment_date)
+        if delivered_date:
+            event_dates.append(delivered_date)
+        updated_at = max(event_dates).strftime('%Y-%m-%d %H:%M:%S')
+        
         order = {
             'order_id': order_id,
             'customer_id': customer_id,
-            'order_date': order_date.strftime('%Y-%m-%d %H:%M:%S'),
-            'payment_date': payment_date.strftime('%Y-%m-%d %H:%M:%S') if payment_date else None,
-            'shipment_date': shipment_date.strftime('%Y-%m-%d %H:%M:%S') if shipment_date else None,
-            'delivered_date': delivered_date.strftime('%Y-%m-%d %H:%M:%S') if delivered_date else None,
+            'order_date': order_date_str,
+            'payment_date': payment_date_str,
+            'shipment_date': shipment_date_str,
+            'delivered_date': delivered_date_str,
+            'created_at': order_date_str,
+            'updated_at': updated_at,
             'order_status': order_status,
             'payment_status': payment_status,
             'subtotal': subtotal,
@@ -510,5 +552,13 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
     print("\r\033[K", end='', flush=True)
     orders_df = pd.DataFrame(orders)
     order_items_df = pd.DataFrame(order_items)
+    
+    # Update customers_df with final segments and updated_at values
+    customers_df = customers_df.copy()
+    for customer_id, customer_data in customers_dict.items():
+        idx = customers_df[customers_df['customer_id'] == customer_id].index
+        if len(idx) > 0:
+            customers_df.at[idx[0], 'customer_segment'] = customer_segments.get(customer_id)
+            customers_df.at[idx[0], 'updated_at'] = customer_data.get('updated_at', customer_data['signup_date'])
     
     return orders_df, order_items_df, customers_df

@@ -2,9 +2,10 @@
 Generates realistic product data from the parameters in settings.py and product_templates.py
 """
 
-from seed_data.config.product_templates import PRODUCT_TEMPLATES
-from seed_data.config.settings import NUM_PRODUCTS
+from config.product_templates import PRODUCT_TEMPLATES
+from config.settings import NUM_PRODUCTS, START_DATE, END_DATE
 from collections import defaultdict
+from datetime import datetime, timedelta
 import pandas as pd
 import random
 import hashlib
@@ -98,9 +99,18 @@ def generate_products(num_products=NUM_PRODUCTS):
     products = []
     product_id = 1
     
+    # Calculate peak date for triangular distribution (~30% of the way from START_DATE to END_DATE)
+    date_range_days = (END_DATE - START_DATE).days
+    peak_days = int(date_range_days * 0.3)
+    peak_date = START_DATE + timedelta(days=peak_days)
+    
     for combo in selected:
         # Build product name: Brand + Adjective + Product
         product_name_full = f"{combo['brand']} {combo['adjective']} {combo['product_name']}"
+        
+        # Generate created_at with triangular distribution (more recent products more common)
+        days_offset = random.triangular(0, date_range_days, peak_days)
+        created_at = START_DATE + timedelta(days=int(days_offset))
         
         product = {
             'product_id': product_id,
@@ -110,6 +120,7 @@ def generate_products(num_products=NUM_PRODUCTS):
             'brand': combo['brand'],
             'price': combo['base_price'],
             'cost': combo['base_cost'],
+            'created_at': created_at.strftime('%Y-%m-%d %H:%M:%S')
         }
         
         # Add color if available

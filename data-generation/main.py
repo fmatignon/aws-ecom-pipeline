@@ -1,25 +1,32 @@
 """
 Master data generator - orchestrates all generator calls in proper sequence
 """
+import sys
+import os
+from pathlib import Path
 
-from seed_data.generators.customers import generate_customers
-from seed_data.generators.products import generate_products
-from seed_data.generators.orders import generate_orders
-from seed_data.generators.payments import generate_payments
-from seed_data.generators.shipments import generate_shipments
-from seed_data.config.settings import (
+# Add the data-generation directory to Python path when running as script
+# This allows running from parent directory: py data-generation/main.py
+script_dir = Path(__file__).parent.absolute()
+if str(script_dir) not in sys.path:
+    sys.path.insert(0, str(script_dir))
+
+from generators.customers import generate_customers
+from generators.products import generate_products
+from generators.orders import generate_orders
+from generators.payments import generate_payments
+from generators.shipments import generate_shipments
+from config.settings import (
     NUM_CUSTOMERS, NUM_PRODUCTS, NUM_ORDERS
 )
-import pandas as pd
 from datetime import datetime
-import os
 
 
 def generate_all_data(
     num_customers=NUM_CUSTOMERS,
     num_products=NUM_PRODUCTS,
     num_orders=NUM_ORDERS,
-    output_dir='../output',
+    output_dir='output',
     output_format='csv',
     save_data=True
 ):
