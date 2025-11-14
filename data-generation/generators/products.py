@@ -3,7 +3,7 @@ Generates realistic product data from the parameters in settings.py and product_
 """
 
 from config.product_templates import PRODUCT_TEMPLATES
-from config.settings import NUM_PRODUCTS, START_DATE, END_DATE
+from config.settings import NUM_PRODUCTS, START_DATE, END_DATE, PRODUCTS_PER_DAY
 from collections import defaultdict
 from datetime import datetime, timedelta
 import pandas as pd
@@ -143,4 +143,105 @@ def generate_products(num_products=NUM_PRODUCTS):
     
     # Clear progress line using ANSI escape code
     print("\r\033[K", end='', flush=True)
+    return pd.DataFrame(products)
+
+
+def generate_products_for_date_range(
+    start_date: datetime,
+    end_date: datetime,
+    start_product_id: int = 1
+) -> pd.DataFrame:
+    """
+    Generate products for a specific date range (for unified system)
+    
+    Args:
+        start_date: Start date for product creation
+        end_date: End date for product creation
+        start_product_id: Starting product ID
+    
+    Returns:
+        DataFrame with product records
+    """
+    # Calculate number of days and products to generate
+    days = (end_date - start_date).days + 1
+    num_products = int(PRODUCTS_PER_DAY * days)
+    
+    if num_products == 0:
+        return pd.DataFrame()
+    
+    # Collect all category/subcategory/product combinations
+    all_combinations = []
+    for category, subcategories in PRODUCT_TEMPLATES.items():
+        for subcategory, data in subcategories.items():
+            brands = data['brands']
+            adjectives = data['adjectives']
+            products = data['products']
+            margin_range = data['margin_range']
+            
+            for product_template in products:
+                product_name = product_template['name']
+                price_range = product_template['price_range']
+                colors = product_template.get('colors', [None])
+                
+                for brand in brands:
+                    for adjective in adjectives:
+                        base_price = _generate_consistent_price(
+                            brand, adjective, product_name, price_range
+                        )
+                        margin = _generate_consistent_margin(
+                            brand, adjective, product_name, margin_range
+                        )
+                        base_cost = round(base_price * (1 - margin), 2)
+                        
+                        for color in colors:
+                            all_combinations.append({
+                                'category': category,
+                                'subcategory': subcategory,
+                                'brand': brand,
+                                'adjective': adjective,
+                                'product_name': product_name,
+                                'color': color,
+                                'base_price': base_price,
+                                'base_cost': base_cost,
+                                'margin': margin
+                            })
+    
+    # Sample combinations if needed
+    if len(all_combinations) <= num_products:
+        selected = all_combinations.copy()
+        while len(selected) < num_products:
+            selected.append(random.choice(all_combinations))
+        selected = random.sample(selected, num_products)
+    else:
+        selected = random.sample(all_combinations, num_products)
+    
+    # Build final product list
+    products = []
+    product_id = start_product_id
+    date_range_days = (end_date - start_date).days
+    
+    for combo in selected:
+        product_name_full = f"{combo['brand']} {combo['adjective']} {combo['product_name']}"
+        
+        # Generate created_at within date range
+        days_offset = random.uniform(0, date_range_days)
+        created_at = start_date + timedelta(days=int(days_offset), hours=random.randint(0, 23))
+        
+        product = {
+            'product_id': product_id,
+            'product_name': product_name_full,
+            'category': combo['category'],
+            'sub_category': combo['subcategory'],
+            'brand': combo['brand'],
+            'price': combo['base_price'],
+            'cost': combo['base_cost'],
+            'created_at': created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        if combo['color'] is not None:
+            product['color'] = combo['color']
+        
+        products.append(product)
+        product_id += 1
+    
     return pd.DataFrame(products)

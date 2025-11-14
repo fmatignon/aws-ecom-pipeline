@@ -37,6 +37,7 @@ venv.bak/
 *.swo
 *~
 .DS_Store
+*.code-workspace
 
 # CDK
 cdk.out/
@@ -67,3 +68,5 @@ dmypy.json
 
 # Logs
 *.log
+
+DEPLOYMENT_*.md

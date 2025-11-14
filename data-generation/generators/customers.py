@@ -2,7 +2,7 @@
 Generates realistic customer data from the parameters in settings.py
 """
 
-from config.settings import NUM_CUSTOMERS, START_DATE, END_DATE, COUNTRIES
+from config.settings import NUM_CUSTOMERS, START_DATE, END_DATE, COUNTRIES, CUSTOMERS_PER_DAY
 from datetime import datetime, timedelta
 from faker import Faker
 import pandas as pd
@@ -184,4 +184,91 @@ def generate_customers(num_customers=NUM_CUSTOMERS):
     
     # Clear progress line using ANSI escape code
     print("\r\033[K", end='', flush=True)
+    return pd.DataFrame(customers)
+
+
+def generate_customers_for_date_range(
+    start_date: datetime,
+    end_date: datetime,
+    start_customer_id: int = 1
+) -> pd.DataFrame:
+    """
+    Generate customers for a specific date range (for unified system)
+    
+    Args:
+        start_date: Start date for customer signups
+        end_date: End date for customer signups
+        start_customer_id: Starting customer ID
+    
+    Returns:
+        DataFrame with customer records
+    """
+    # Calculate number of days and customers to generate
+    days = (end_date - start_date).days + 1
+    num_customers = int(CUSTOMERS_PER_DAY * days)
+    
+    if num_customers == 0:
+        return pd.DataFrame()
+    
+    customers = []
+    customer_id = start_customer_id
+    
+    for i in range(num_customers):
+        # Weighted country selection
+        country = random.choices(
+            list(COUNTRIES.keys()),
+            weights=[COUNTRIES[c]['weight'] for c in COUNTRIES.keys()]
+        )[0]
+        
+        # Set locale for realistic names/addresses per country
+        locale_map = {
+            'United States': 'en_US',
+            'Canada': 'en_CA',
+            'United Kingdom': 'en_GB',
+            'Germany': 'de_DE',
+            'France': 'fr_FR',
+            'Italy': 'it_IT',
+            'Spain': 'es_ES',
+            'Netherlands': 'nl_NL',
+            'Australia': 'en_AU',
+            'Japan': 'ja_JP'
+        }
+        locale = locale_map.get(country, 'en_US')
+        fake_local = Faker(locale)
+        
+        # Generate signup date within range
+        days_offset = random.uniform(0, days - 1)
+        signup_date = start_date + timedelta(days=int(days_offset), hours=random.randint(0, 23))
+        
+        # Generate postcode and location
+        postcode = fake_local.postcode()
+        location = get_location_for_postcode(postcode, country, fake_local)
+        
+        # Generate unique phone and address
+        phone = _generate_unique_phone(fake_local)
+        address = _generate_unique_address_for_postcode(country, postcode, fake_local)
+        
+        signup_date_str = signup_date.strftime('%Y-%m-%d %H:%M:%S')
+        customer = {
+            'customer_id': customer_id,
+            'first_name': fake_local.first_name(),
+            'last_name': fake_local.last_name(),
+            'email': fake.unique.email(),
+            'phone': phone,
+            'country': country,
+            'city': location['city'],
+            'state': location['state'],
+            'postal_code': postcode,
+            'address': address,
+            'signup_date': signup_date_str,
+            'created_at': signup_date_str,
+            'updated_at': signup_date_str,
+            'customer_segment': None,
+            'date_of_birth': fake.date_of_birth(minimum_age=18, maximum_age=80).strftime('%Y-%m-%d'),
+            'gender': random.choice(['M', 'F', 'Other', None])
+        }
+        
+        customers.append(customer)
+        customer_id += 1
+    
     return pd.DataFrame(customers)

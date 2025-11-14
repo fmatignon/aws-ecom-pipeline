@@ -10,6 +10,7 @@ import aws_cdk as cdk
 from rds.rds_stack import RDSStack
 from s3.s3_stack import S3Stack
 from api.api_stack import APIStack
+from operations.operations_stack import OperationsStack
 
 # Load environment variables from .env file (in project root, one level up)
 env_path = Path(__file__).parent.parent / '.env'
@@ -42,6 +43,16 @@ api_stack = APIStack(
     app, 
     "EcomAPIStack", 
     s3_bucket=s3_stack.bucket,
+    env=env
+)
+
+operations_stack = OperationsStack(
+    app,
+    "EcomOperationsStack",
+    s3_bucket=s3_stack.bucket,
+    rds_database=rds_stack.database,
+    rds_secret=rds_stack.db_secret,
+    vpc=rds_stack.vpc,
     env=env
 )
 

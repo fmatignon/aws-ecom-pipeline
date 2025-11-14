@@ -42,10 +42,24 @@ def generate_payments(orders_df):
         payment_method = order['payment_method']
         payment_status = order['payment_status']
         amount = order['total_amount']
-        payment_date_str = order['payment_date']
+        payment_date_val = order['payment_date']
         customer_id = order['customer_id']
         order_id = order['order_id']
-        delivered_date_str = order.get('delivered_date')
+        delivered_date_val = order.get('delivered_date')
+        
+        # Handle payment_date (can be string, datetime, or Timestamp)
+        if isinstance(payment_date_val, str):
+            payment_date_str = payment_date_val
+            payment_date = datetime.strptime(payment_date_val, '%Y-%m-%d %H:%M:%S')
+        elif isinstance(payment_date_val, datetime):
+            payment_date = payment_date_val
+            payment_date_str = payment_date_val.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(payment_date_val, pd.Timestamp):
+            payment_date = payment_date_val.to_pydatetime()
+            payment_date_str = payment_date.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            payment_date = pd.to_datetime(payment_date_val).to_pydatetime()
+            payment_date_str = payment_date.strftime('%Y-%m-%d %H:%M:%S')
         
         # Determine card_brand if payment_method is credit_card
         card_brand = None
@@ -68,9 +82,18 @@ def generate_payments(orders_df):
         created_at = payment_date_str
         
         # Calculate updated-at based on payment status
-        if final_payment_status == 'refunded' and delivered_date_str:
+        if final_payment_status == 'refunded' and delivered_date_val and pd.notna(delivered_date_val):
             # Refund processed 5-30 days after delivery
-            delivered_date = datetime.strptime(delivered_date_str, '%Y-%m-%d %H:%M:%S')
+            # Handle delivered_date (can be string, datetime, or Timestamp)
+            if isinstance(delivered_date_val, str):
+                delivered_date = datetime.strptime(delivered_date_val, '%Y-%m-%d %H:%M:%S')
+            elif isinstance(delivered_date_val, datetime):
+                delivered_date = delivered_date_val
+            elif isinstance(delivered_date_val, pd.Timestamp):
+                delivered_date = delivered_date_val.to_pydatetime()
+            else:
+                delivered_date = pd.to_datetime(delivered_date_val).to_pydatetime()
+            
             refund_days = random.randint(5, 30)
             updated_at = (delivered_date + timedelta(days=refund_days)).strftime('%Y-%m-%d %H:%M:%S')
         else:

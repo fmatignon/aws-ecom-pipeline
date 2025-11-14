@@ -128,13 +128,28 @@ def generate_shipments(orders_df, order_items_df=None, customers_df=None):
         shipment_date_str = order.get('shipment_date')
         delivered_date_str = order.get('delivered_date')
         
-        # Parse dates
+        # Parse dates (handle string, datetime, or Timestamp)
         shipment_date = None
         delivered_date = None
-        if shipment_date_str:
-            shipment_date = datetime.strptime(shipment_date_str, '%Y-%m-%d %H:%M:%S')
-        if delivered_date_str:
-            delivered_date = datetime.strptime(delivered_date_str, '%Y-%m-%d %H:%M:%S')
+        if shipment_date_str and pd.notna(shipment_date_str):
+            if isinstance(shipment_date_str, str):
+                shipment_date = datetime.strptime(shipment_date_str, '%Y-%m-%d %H:%M:%S')
+            elif isinstance(shipment_date_str, datetime):
+                shipment_date = shipment_date_str
+            elif isinstance(shipment_date_str, pd.Timestamp):
+                shipment_date = shipment_date_str.to_pydatetime()
+            else:
+                shipment_date = pd.to_datetime(shipment_date_str).to_pydatetime()
+        
+        if delivered_date_str and pd.notna(delivered_date_str):
+            if isinstance(delivered_date_str, str):
+                delivered_date = datetime.strptime(delivered_date_str, '%Y-%m-%d %H:%M:%S')
+            elif isinstance(delivered_date_str, datetime):
+                delivered_date = delivered_date_str
+            elif isinstance(delivered_date_str, pd.Timestamp):
+                delivered_date = delivered_date_str.to_pydatetime()
+            else:
+                delivered_date = pd.to_datetime(delivered_date_str).to_pydatetime()
         
         # Generate tracking number
         tracking_number = _generate_tracking_number(shipping_carrier, tracking_number_id)
@@ -166,7 +181,7 @@ def generate_shipments(orders_df, order_items_df=None, customers_df=None):
         # Calculate updated-at based on shipment status
         if shipment_status == 'delivered' and delivered_date:
             # Delivered: use actual_delivery_date
-            updated_at = delivered_date_str
+            updated_at = delivered_date.strftime('%Y-%m-%d %H:%M:%S') if delivered_date else None
         elif shipment_status == 'exception' and estimated_delivery_date:
             # Exception: detected after estimated delivery date
             days_overdue = max(1, (current_date - estimated_delivery_date).days)
@@ -174,7 +189,7 @@ def generate_shipments(orders_df, order_items_df=None, customers_df=None):
             updated_at = (estimated_delivery_date + timedelta(days=exception_detection_days)).strftime('%Y-%m-%d %H:%M:%S')
         elif shipment_date:
             # In transit or pending: use shipment_date
-            updated_at = shipment_date_str
+            updated_at = shipment_date.strftime('%Y-%m-%d %H:%M:%S')
         else:
             # No shipment date yet
             updated_at = None
@@ -189,10 +204,10 @@ def generate_shipments(orders_df, order_items_df=None, customers_df=None):
             'destination_postal_code': destination_postal_code,
             'status': shipment_status,
             'shipping_cost': shipping_cost,
-            'shipment-date': shipment_date_str,
+            'shipment-date': shipment_date.strftime('%Y-%m-%d %H:%M:%S') if shipment_date else None,
             'estimated-delivery-date': estimated_delivery_date.strftime('%Y-%m-%d %H:%M:%S') if estimated_delivery_date else None,
-            'actual-delivery-date': delivered_date_str,
-            'created-at': shipment_date_str if shipment_date_str else None,
+            'actual-delivery-date': delivered_date.strftime('%Y-%m-%d %H:%M:%S') if delivered_date else None,
+            'created-at': shipment_date.strftime('%Y-%m-%d %H:%M:%S') if shipment_date else None,
             'updated-at': updated_at,
         }
         

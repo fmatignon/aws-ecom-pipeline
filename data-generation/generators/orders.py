@@ -10,7 +10,8 @@ from config.settings import (
     NEW_CUSTOMER_DURATION_DAYS, ITEMS_PER_ORDER_DISTRIBUTION,
     QUANTITY_PER_PRODUCT_MIN, QUANTITY_PER_PRODUCT_MAX,
     ORDER_DATE_DISTRIBUTION_PEAK, ORDER_STATUS_TRANSITION_WEIGHTS,
-    AVG_PROCESSING_TIME, AVG_SHIPPING_TIME, AVG_DELIVERY_TIME
+    AVG_PROCESSING_TIME, AVG_SHIPPING_TIME, AVG_DELIVERY_TIME,
+    ORDERS_PER_DAY
 )
 from datetime import datetime, timedelta
 import pandas as pd
@@ -99,7 +100,9 @@ def _calculate_discount(subtotal, segment, discount_seed):
     discount_rate = CUSTOMER_SEGMENTS[segment]['discount_rate']
     
     # Use discount_seed to determine if discount is used (reproducible)
-    random.seed(discount_seed)
+    # Convert to int if it's a numpy/pandas type
+    seed_value = int(discount_seed) if discount_seed is not None else None
+    random.seed(seed_value)
     use_discount = random.random() < DISCOUNT_USAGE_RATE
     random.seed()  # Reset seed
     
@@ -117,7 +120,7 @@ def _calculate_tax(subtotal, discount_amount, country):
     return round(taxable_amount * tax_rate, 2)
 
 
-def _determine_order_status(order_date, payment_status):
+def _determine_order_status(order_date, payment_status, current_date=None):
     """
     Determine order status based on payment status and timing
     """
@@ -129,8 +132,11 @@ def _determine_order_status(order_date, payment_status):
     if payment_status == 'pending':
         return 'pending'
     
+    # Use current_date if provided, otherwise use END_DATE
+    reference_date = current_date if current_date else END_DATE
+    
     # For completed payments, determine status based on time since order
-    days_since_order = (END_DATE - order_date).days
+    days_since_order = (reference_date - order_date).days
     
     # Adjust based on timing - older orders more likely to be delivered
     if days_since_order > AVG_PROCESSING_TIME + AVG_SHIPPING_TIME + AVG_DELIVERY_TIME:
@@ -287,130 +293,161 @@ def _update_category_preferences(customer_category_prefs, customer_id, selected_
 
 def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
     """
-    Generate orders with realistic business logic
+    Generate orders with realistic business logic (legacy function for backward compatibility)
+    
+    This function is a wrapper around generate_orders_for_date_range() for initial seed generation.
+    It generates orders across START_DATE to END_DATE.
+    
+    Note: Customer segments are NOT updated here - that should be done separately by the caller.
     
     Args:
-        num_orders: Number of orders to generate
+        num_orders: Number of orders to generate (ignored, uses ORDERS_PER_DAY * date_range)
         customers_df: DataFrame with customer data
         products_df: DataFrame with product data
         
     Returns:
         tuple: (orders_df, order_items_df, customers_df)
+        Note: customers_df is returned unchanged - caller should update segments separately
     """
-    num_orders = int(num_orders)  # Ensure integer
+    from config.settings import START_DATE, END_DATE
+    
     if customers_df is None or products_df is None:
         raise ValueError("customers_df and products_df are required")
     
-    # Assign VIP subscribers (voluntary VIP status)
+    # Use generate_orders_for_date_range for the full date range
+    start_datetime = datetime.combine(START_DATE.date(), datetime.min.time())
+    end_datetime = datetime.combine(END_DATE.date(), datetime.max.time())
+    
+    # Generate orders
+    orders_df, order_items_df = generate_orders_for_date_range(
+        start_datetime, end_datetime,
+        customers_df, products_df,
+        pd.DataFrame(),  # No existing orders for initial seed
+        start_order_id=1,
+        start_payment_id=1,
+        start_tracking_number=1
+    )
+    
+    # Return customers_df unchanged - caller should update segments separately
+    return orders_df, order_items_df, customers_df
+
+
+def generate_orders_for_date_range(
+    start_date: datetime,
+    end_date: datetime,
+    customers_df: pd.DataFrame,
+    products_df: pd.DataFrame,
+    existing_orders_df: pd.DataFrame,
+    start_order_id: int = 1,
+    start_order_item_id: int = 1,
+    start_payment_id: int = 1,
+    start_tracking_number: int = 1
+) -> tuple:
+    """
+    Generate new orders for date range (for unified system)
+    
+    Args:
+        start_date: Start date for order generation
+        end_date: End date for order generation
+        customers_df: DataFrame with all customers
+        products_df: DataFrame with all products
+        existing_orders_df: DataFrame with existing orders (for history)
+        start_order_id: Starting order ID
+        start_payment_id: Starting payment ID
+        start_tracking_number: Starting tracking number
+    
+    Returns:
+        tuple: (orders_df, order_items_df)
+    """
+    days = (end_date - start_date).days + 1
+    num_orders = int(ORDERS_PER_DAY * days)
+    
+    if num_orders == 0:
+        return pd.DataFrame(), pd.DataFrame()
+    
+    # Assign VIP subscribers
     all_customer_ids = customers_df['customer_id'].tolist()
     num_vip_subscribers = int(len(all_customer_ids) * VIP_SUBSCRIPTION_RATE)
     vip_subscribers = set(random.sample(all_customer_ids, num_vip_subscribers))
     
-    # Create lookup dictionaries for faster access
     customers_dict = customers_df.set_index('customer_id').to_dict('index')
     products_dict = products_df.set_index('product_id').to_dict('index')
     
-    # Cache parsed signup dates to avoid parsing twice
     signup_dates_cache = {}
     for customer_id, customer in customers_dict.items():
-        signup_dates_cache[customer_id] = datetime.strptime(customer['signup_date'], '%Y-%m-%d %H:%M:%S')
+        signup_date_val = customer['signup_date']
+        # Handle both string and datetime/timestamp objects
+        if isinstance(signup_date_val, str):
+            signup_dates_cache[customer_id] = datetime.strptime(signup_date_val, '%Y-%m-%d %H:%M:%S')
+        elif isinstance(signup_date_val, datetime):
+            signup_dates_cache[customer_id] = signup_date_val
+        elif isinstance(signup_date_val, pd.Timestamp):
+            signup_dates_cache[customer_id] = signup_date_val.to_pydatetime()
+        else:
+            # Try to parse as string
+            signup_dates_cache[customer_id] = pd.to_datetime(signup_date_val).to_pydatetime()
     
-    # Track customer category preferences and order history
     customer_category_prefs = {}
     customer_order_history = defaultdict(list)
     
-    # Track customer segments to detect changes and update updated_at
-    customer_segments = {}  # customer_id -> current_segment
-    for customer_id in customers_dict.keys():
-        customer_segments[customer_id] = None  # Initialize to None
+    # Build order history from existing orders
+    if len(existing_orders_df) > 0:
+        for _, order in existing_orders_df.iterrows():
+            customer_id = order['customer_id']
+            order_date_val = order['order_date']
+            # Handle both string and datetime/timestamp objects
+            if isinstance(order_date_val, str):
+                order_date = datetime.strptime(order_date_val, '%Y-%m-%d %H:%M:%S')
+            elif isinstance(order_date_val, datetime):
+                order_date = order_date_val
+            elif isinstance(order_date_val, pd.Timestamp):
+                order_date = order_date_val.to_pydatetime()
+            else:
+                order_date = pd.to_datetime(order_date_val).to_pydatetime()
+            total_amount = order['total_amount']
+            customer_order_history[customer_id].append((order_date, total_amount))
     
     orders = []
     order_items = []
+    order_id = start_order_id
+    order_item_id = start_order_item_id
+    payment_id_counter = start_payment_id
+    tracking_number_counter = start_tracking_number
     
-    # Track payment_id and tracking_number for FK relationships
-    payment_id_counter = 1
-    tracking_number_counter = 1
-    
-    # Pre-calculate customer weights based on tenure (how long they've been customers)
-    # Customers who signed up earlier should get more orders
+    # Generate customer weights
     customer_weights = []
     customer_ids = []
-    
     for customer_id in customers_dict.keys():
         signup_date = signup_dates_cache[customer_id]
-        # Calculate days since signup (tenure)
-        tenure_days = (END_DATE - signup_date).days
-        # Weight is proportional to tenure (min weight of 0.1 to ensure new customers still get some orders)
-        weight = max(0.1, tenure_days / 365.0)  # Normalize by year
+        tenure_days = (end_date - signup_date).days
+        weight = max(0.1, tenure_days / 365.0)
         customer_weights.append(weight)
         customer_ids.append(customer_id)
     
-    # Convert to numpy arrays and normalize weights to probabilities for faster sampling
     customer_ids_array = np.array(customer_ids)
     customer_weights_array = np.array(customer_weights)
     customer_probs = customer_weights_array / customer_weights_array.sum()
     
-    # Generate order-customer assignments with per-customer date distributions
-    order_assignments = []
-    for assignment_idx in range(1, num_orders + 1):
-        # Select customer weighted by tenure (using numpy for much faster sampling)
+    # Generate orders
+    for i in range(num_orders):
         customer_id = np.random.choice(customer_ids_array, p=customer_probs)
         signup_date = signup_dates_cache[customer_id]
-        
-        # Generate order date using triangular distribution from signup to END_DATE
-        tenure_days = (END_DATE - signup_date).days
-        
-        if tenure_days > 0:
-            peak_days = tenure_days * ORDER_DATE_DISTRIBUTION_PEAK
-            days_since_signup = random.triangular(0, tenure_days, peak_days)
-            order_date = signup_date + timedelta(days=days_since_signup)
-        else:
-            # If tenure_days == 0, just use signup_date and random time
-            order_date = signup_date.replace(
-                hour=random.randint(0, 23),
-                minute=random.randint(0, 59),
-                second=random.randint(0, 59)
-            )
-        
-        order_assignments.append((customer_id, order_date))
-        
-        # Progress logging for assignment phase
-        pct = int((assignment_idx / num_orders) * 100)
-        prev_pct = int(((assignment_idx - 1) / num_orders) * 100) if assignment_idx > 1 else -1
-        
-        if pct != prev_pct or assignment_idx == num_orders:
-            bar_width = 50
-            filled = int(bar_width * pct / 100)
-            bar = '|' * filled + ' ' * (bar_width - filled)
-            print(f"\r      Assigning orders: {pct:3d}% |{bar}|", end='', flush=True)
-    
-    # Clear assignment progress line using ANSI escape code
-    print("\r\033[K", end='', flush=True)
-    order_assignments.sort(key=lambda x: x[1])
-    
-    # Process orders chronologically
-    for order_id in range(1, num_orders + 1):
-        customer_id, order_date = order_assignments[order_id - 1]
         customer = customers_dict[customer_id]
         country = customer['country']
-        signup_date = signup_dates_cache[customer_id]  # Use cached date
         
-        # Determine payment method
-        payment_method = random.choices(
-            list(PAYMENT_METHODS.keys()),
-            weights=list(PAYMENT_METHODS.values())
-        )[0]
+        # Generate order date within range
+        days_offset = random.uniform(0, days - 1)
+        order_date = start_date + timedelta(days=int(days_offset), hours=random.randint(0, 23))
         
-        # Determine payment status
+        payment_method = random.choices(list(PAYMENT_METHODS.keys()), weights=list(PAYMENT_METHODS.values()))[0]
         payment_status = _determine_payment_status()
         
-        # Generate payment_id if payment completed or failed
         payment_id = None
         if payment_status in ['completed', 'failed']:
             payment_id = payment_id_counter
             payment_id_counter += 1
         
-        # Select products based on category preferences
+        # Select products
         items = list(ITEMS_PER_ORDER_DISTRIBUTION.keys())
         weights = list(ITEMS_PER_ORDER_DISTRIBUTION.values())
         num_items = random.choices(items, weights=weights)[0]
@@ -419,10 +456,14 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
             products_df, customer_category_prefs, customer_id, num_items, order_date
         )
         
-        # Update category preferences based on purchase
-        _update_category_preferences(customer_category_prefs, customer_id, selected_products, products_dict)
+        # Update preferences
+        for product_id in selected_products:
+            category = products_dict[product_id]['category']
+            if customer_id not in customer_category_prefs:
+                customer_category_prefs[customer_id] = defaultdict(int)
+            customer_category_prefs[customer_id][category] += 1
         
-        # Calculate subtotal from order items
+        # Calculate subtotal
         subtotal = 0.0
         for product_id in selected_products:
             product = products_dict[product_id]
@@ -431,9 +472,8 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
             line_total = round(unit_price * quantity, 2)
             subtotal += line_total
             
-            # Add to order_items
             order_items.append({
-                'order_item_id': len(order_items) + 1,
+                'order_item_id': order_item_id,
                 'order_id': order_id,
                 'product_id': product_id,
                 'quantity': quantity,
@@ -441,84 +481,51 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
                 'line_total': line_total,
                 'created_at': order_date.strftime('%Y-%m-%d %H:%M:%S')
             })
+            order_item_id += 1
         
         subtotal = round(subtotal, 2)
         
-        # Determine customer segment at this order time
+        # Determine segment
         segment = _determine_segment_at_order_time(
-            customer_id, order_date, signup_date, 
-            customer_order_history[customer_id], vip_subscribers
+            customer_id, order_date, signup_date,
+            customer_order_history.get(customer_id, []), vip_subscribers
         )
         
-        # Update customer updated_at if segment changed
-        previous_segment = customer_segments.get(customer_id)
-        if previous_segment != segment:
-            # Segment changed, update customer's updated_at
-            customers_dict[customer_id]['updated_at'] = order_date.strftime('%Y-%m-%d %H:%M:%S')
-            customer_segments[customer_id] = segment
-        
-        # Calculate discount based on actual segment at order time
-        # Use order_id as seed for consistent discount application
+        # Calculate costs
         discount_amount = _calculate_discount(subtotal, segment, order_id)
-        
-        # Calculate shipping cost based on segment
-        order_number = len(customer_order_history[customer_id]) + 1
+        order_number = len(customer_order_history.get(customer_id, [])) + 1
         shipping_cost = _calculate_shipping_cost(subtotal, segment, order_number, country)
-        
-        # Calculate tax (on subtotal after discount)
         tax_amount = _calculate_tax(subtotal, discount_amount, country)
-        
-        # Calculate total
         total_amount = round(subtotal - discount_amount + tax_amount + shipping_cost, 2)
         
         # Determine order status
-        order_status = _determine_order_status(order_date, payment_status)
-        
-        # Apply refund logic
+        order_status = _determine_order_status(order_date, payment_status, end_date)
         order_status, payment_status = _apply_refund_logic(order_status, payment_status, order_date)
         
         # Calculate timestamps
-        payment_date, shipment_date, delivered_date = _calculate_timestamps(
-            order_date, order_status, payment_status
-        )
+        payment_date, shipment_date, delivered_date = _calculate_timestamps(order_date, order_status, payment_status)
         
-        # Determine shipping carrier
-        shipping_carrier = random.choices(
-            list(CARRIERS.keys()),
-            weights=list(CARRIERS.values())
-        )[0]
-        
-        # Generate tracking_number if order is shipped/delivered/refunded
+        # Generate tracking number if shipped
         tracking_number = None
+        shipping_carrier = None
         if order_status in ['shipped', 'delivered', 'refunded']:
             tracking_number = tracking_number_counter
             tracking_number_counter += 1
+            shipping_carrier = random.choices(
+                list(CARRIERS.keys()),
+                weights=list(CARRIERS.values())
+            )[0]
         
-        # Create order record
         order_date_str = order_date.strftime('%Y-%m-%d %H:%M:%S')
-        payment_date_str = payment_date.strftime('%Y-%m-%d %H:%M:%S') if payment_date else None
-        shipment_date_str = shipment_date.strftime('%Y-%m-%d %H:%M:%S') if shipment_date else None
-        delivered_date_str = delivered_date.strftime('%Y-%m-%d %H:%M:%S') if delivered_date else None
-        
-        # Calculate updated_at as latest of all event dates
-        event_dates = [order_date]
-        if payment_date:
-            event_dates.append(payment_date)
-        if shipment_date:
-            event_dates.append(shipment_date)
-        if delivered_date:
-            event_dates.append(delivered_date)
-        updated_at = max(event_dates).strftime('%Y-%m-%d %H:%M:%S')
-        
-        order = {
+        orders.append({
             'order_id': order_id,
             'customer_id': customer_id,
             'order_date': order_date_str,
-            'payment_date': payment_date_str,
-            'shipment_date': shipment_date_str,
-            'delivered_date': delivered_date_str,
+            'payment_date': payment_date.strftime('%Y-%m-%d %H:%M:%S') if payment_date else None,
+            'shipment_date': shipment_date.strftime('%Y-%m-%d %H:%M:%S') if shipment_date else None,
+            'delivered_date': delivered_date.strftime('%Y-%m-%d %H:%M:%S') if delivered_date else None,
             'created_at': order_date_str,
-            'updated_at': updated_at,
+            'updated_at': order_date_str,
             'order_status': order_status,
             'payment_status': payment_status,
             'subtotal': subtotal,
@@ -530,35 +537,124 @@ def generate_orders(num_orders=NUM_ORDERS, customers_df=None, products_df=None):
             'payment_id': payment_id,
             'shipping_carrier': shipping_carrier,
             'tracking_number': tracking_number,
-            'customer_segment_at_order': segment  # Track segment at order time
-        }
+            'customer_segment_at_order': segment
+        })
         
-        orders.append(order)
-        
-        # Add to customer order history (for future orders' segment calculation)
         customer_order_history[customer_id].append((order_date, total_amount))
+        order_id += 1
+    
+    return pd.DataFrame(orders), pd.DataFrame(order_items)
+
+
+def update_existing_orders(existing_orders_df: pd.DataFrame, current_date: datetime) -> pd.DataFrame:
+    """
+    Update existing orders with status transitions based on time elapsed
+    
+    Args:
+        existing_orders_df: DataFrame with existing orders
+        current_date: Current date for status calculations
+    
+    Returns:
+        DataFrame with updated orders
+    """
+    if len(existing_orders_df) == 0:
+        return pd.DataFrame()
+    
+    updated_orders = []
+    total = len(existing_orders_df)
+    
+    for idx, (_, order) in enumerate(existing_orders_df.iterrows(), 1):
+        order_date_val = order['order_date']
+        # Handle both string and datetime/timestamp objects
+        if isinstance(order_date_val, str):
+            order_date = datetime.strptime(order_date_val, '%Y-%m-%d %H:%M:%S')
+        elif isinstance(order_date_val, datetime):
+            order_date = order_date_val
+        elif isinstance(order_date_val, pd.Timestamp):
+            order_date = order_date_val.to_pydatetime()
+        else:
+            order_date = pd.to_datetime(order_date_val).to_pydatetime()
+        current_status = order['order_status']
+        current_payment_status = order['payment_status']
         
-        # Update progress every 1%
-        pct = int((order_id / num_orders) * 100)
-        prev_pct = int(((order_id - 1) / num_orders) * 100) if order_id > 1 else -1
+        # Skip if already in final state
+        if current_status in ['cancelled', 'refunded']:
+            updated_orders.append(order.to_dict())
+            continue
         
-        if pct != prev_pct or order_id == num_orders:
-            bar_width = 50
-            filled = int(bar_width * pct / 100)
-            bar = '|' * filled + ' ' * (bar_width - filled)
-            print(f"\r      Orders: {pct:3d}% |{bar}|", end='', flush=True)
+        days_since_order = (current_date - order_date).days
+        
+        # Status transitions
+        new_status = current_status
+        new_payment_status = current_payment_status
+        shipment_date_added = False
+        delivered_date_added = False
+        
+        if current_status == 'processing':
+            if days_since_order >= AVG_PROCESSING_TIME:
+                new_status = 'shipped'
+                if pd.isna(order.get('shipment_date')):
+                    shipment_date = order_date + timedelta(
+                        days=AVG_PROCESSING_TIME,
+                        hours=random.randint(0, 23)
+                    )
+                    order['shipment_date'] = shipment_date.strftime('%Y-%m-%d %H:%M:%S')
+                    shipment_date_added = True
+        
+        elif current_status == 'shipped':
+            if days_since_order >= AVG_PROCESSING_TIME + AVG_SHIPPING_TIME + AVG_DELIVERY_TIME:
+                new_status = 'delivered'
+                if pd.isna(order.get('delivered_date')):
+                    delivered_date = order_date + timedelta(
+                        days=AVG_PROCESSING_TIME + AVG_SHIPPING_TIME + AVG_DELIVERY_TIME,
+                        hours=random.randint(0, 23)
+                    )
+                    order['delivered_date'] = delivered_date.strftime('%Y-%m-%d %H:%M:%S')
+                    delivered_date_added = True
+        
+        elif current_status == 'delivered':
+            # Check for refunds
+            if current_payment_status == 'completed':
+                delivered_date_val = order.get('delivered_date')
+                if delivered_date_val and not pd.isna(delivered_date_val):
+                    # Handle both string and datetime/timestamp objects
+                    if isinstance(delivered_date_val, str):
+                        delivered_date = datetime.strptime(delivered_date_val, '%Y-%m-%d %H:%M:%S')
+                    elif isinstance(delivered_date_val, datetime):
+                        delivered_date = delivered_date_val
+                    elif isinstance(delivered_date_val, pd.Timestamp):
+                        delivered_date = delivered_date_val.to_pydatetime()
+                    else:
+                        delivered_date = pd.to_datetime(delivered_date_val).to_pydatetime()
+                    days_since_delivery = (current_date - delivered_date).days
+                    # Refund can happen 5-30 days after delivery
+                    if days_since_delivery >= 5 and random.random() < REFUND_RATE:
+                        new_status = 'refunded'
+                        new_payment_status = 'refunded'
+        
+        # Check if anything actually changed
+        status_changed = new_status != current_status
+        payment_status_changed = new_payment_status != current_payment_status
+        anything_changed = status_changed or payment_status_changed or shipment_date_added or delivered_date_added
+        
+        # Update order
+        order_dict = order.to_dict()
+        order_dict['order_status'] = new_status
+        order_dict['payment_status'] = new_payment_status
+        
+        # Only update updated_at if something actually changed
+        if anything_changed:
+            order_dict['updated_at'] = current_date.strftime('%Y-%m-%d %H:%M:%S')
+        # Otherwise keep the original updated_at (don't modify it)
+        
+        updated_orders.append(order_dict)
+        
+        # Log progress every 10% for large datasets
+        if total > 100 and idx % max(1, total // 10) == 0:
+            pct = int((idx / total) * 100)
+            print(f"\r      Processing orders: {pct}% ({idx:,}/{total:,})", end='', flush=True)
     
-    # Clear progress line using ANSI escape code
-    print("\r\033[K", end='', flush=True)
-    orders_df = pd.DataFrame(orders)
-    order_items_df = pd.DataFrame(order_items)
+    if total > 100:
+        print("\r\033[K", end='', flush=True)  # Clear progress line
     
-    # Update customers_df with final segments and updated_at values
-    customers_df = customers_df.copy()
-    for customer_id, customer_data in customers_dict.items():
-        idx = customers_df[customers_df['customer_id'] == customer_id].index
-        if len(idx) > 0:
-            customers_df.at[idx[0], 'customer_segment'] = customer_segments.get(customer_id)
-            customers_df.at[idx[0], 'updated_at'] = customer_data.get('updated_at', customer_data['signup_date'])
-    
-    return orders_df, order_items_df, customers_df
+    return pd.DataFrame(updated_orders)
