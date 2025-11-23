@@ -1,0 +1,14 @@
+---
+description: How to comment on files
+alwaysApply: true
+---
+
+Every code file must start with a triple-quoted (""") docstring comment at the very top explaining the file's purpose and what it does.
+
+Every function, method, or class must have a succinct triple-quoted (""") docstring explaining its purpose, usage, and a brief description of each parameter.
+
+Use inline comments sparingly; keep them brief and only when necessary to clarify complex logic.
+
+Do not reference specific variable values or dialog history in comments; assume readers are unfamiliar with the codebase.
+
+Maintain a professional, concise, and informative tone in all comments. Don't include emojis.

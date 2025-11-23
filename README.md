@@ -67,16 +67,6 @@ A comprehensive AWS-based data pipeline for simulating and analyzing e-commerce 
 
 ```
 aws-ecom/
-├── data-generation/          # Source data generation (ECS Fargate)
-│   ├── generators/           # Data generators (customers, orders, etc.)
-│   ├── rds/                  # RDS loader utilities
-│   ├── s3/                   # S3 Parquet manager
-│   ├── config/               # Configuration & settings
-│   ├── main.py               # Main entry point
-│   ├── state.py              # State management (S3 logs)
-│   ├── Dockerfile            # Container image
-│   └── requirements.txt      # Python dependencies
-│
 ├── infrastructure/           # AWS CDK infrastructure as code
 │   ├── rds/                  # RDS stack (Postgres database)
 │   ├── s3/                   # S3 stack (data lake)
@@ -86,9 +76,17 @@ aws-ecom/
 │   └── requirements.txt      # CDK dependencies
 │
 ├── source-systems/           # Source system utilities
-│   ├── lambda/               # Lambda function code
-│   ├── rds/                  # RDS loading scripts
-│   └── s3/                   # S3 utilities
+│   ├── data-generation/      # ECS data generation package
+│   │   ├── generators/       # Data generators (customers, orders, etc.)
+│   │   ├── rds/              # RDS loader utilities
+│   │   ├── s3/               # S3 Parquet manager
+│   │   ├── config/           # Configuration & settings
+│   │   ├── main.py           # Main entry point
+│   │   ├── utils/            # Shared utilities (state, logging, cleanup)
+│   │   ├── Dockerfile        # Container image
+│   │   └── requirements.txt  # Python dependencies
+│   ├── ecs/                  # ECS deployment helpers
+│   ├── lambda/               # Lambda function code                 # S3 utilities
 │
 ├── glue/                     # AWS Glue ETL jobs
 ├── dbt/                      # dbt transformation models
@@ -138,7 +136,7 @@ cdk deploy EcomOperationsStack
 
 ### 3. Build & Deploy Docker Image
 ```bash
-cd ../data-generation
+cd ../source-systems/data-generation
 
 # Get ECR URI from CDK outputs
 export ECR_URI="<your-ecr-uri>"
@@ -153,7 +151,7 @@ docker push $ECR_URI:latest
 
 ### 4. Run Initial Data Generation (Optional - for testing)
 ```bash
-cd data-generation
+cd source-systems/data-generation
 
 # Set environment variables (if not using CDK/ECS)
 export S3_BUCKET_NAME="aws-ecom-pipeline"
@@ -187,8 +185,8 @@ aws logs tail /ecs/ecom-operations --follow
 - **Status Updates**: Automatic order progression (pending → shipped → delivered)
 
 ### Operational Modes
-1. **Initial Run**: Generate historical data from a specified start date
-2. **Ongoing Operations**: Daily incremental updates (new orders, status updates, etc.)
+1. **Initial Run**: Generate full historical dataset (18 months) using date range from `config/settings.py` (triggered when no data exists in RDS or S3 logs)
+2. **Ongoing Operations**: Daily incremental updates from last run date to yesterday
 3. **Bulk Reload**: Efficient full database refresh using Parquet snapshots
 
 ### Storage Strategy
@@ -220,10 +218,10 @@ aws logs tail /ecs/ecom-operations --follow
 
 See `ENV_EXAMPLE.md` for complete configuration guide.
 
-### Customization
+### Environment Variables
 
 #### Adjust Data Generation Settings
-Edit `data-generation/config/settings.py`:
+Edit `source-systems/data-generation/config/settings.py`:
 ```python
 # Customer generation
 INITIAL_CUSTOMERS = 100000
@@ -344,13 +342,13 @@ task_definition = ecs.FargateTaskDefinition(
 
 ### Local Testing
 ```bash
-cd data-generation
+cd source-systems/data-generation
 python main.py
 ```
 
 ### Docker Testing
 ```bash
-cd data-generation
+cd source-systems/data-generation
 docker build -t ecom-operations:test .
 docker run --env-file ../.env ecom-operations:test
 ```

@@ -1,2 +1,4 @@
-# API stack package
+"""
+API Stack for Payments and Shipments Lambda APIs
+"""
 

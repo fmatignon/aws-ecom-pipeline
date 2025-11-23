@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+description: How to use console logs
+---
+Agents must ensure all print/log statements include a UTC timestamp and clearly state which section of the script is executing. At the start and end of each principal section or operation, log the event with messages such as:
+
+print(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] Starting: <Section Description>")
+print(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] Completed: <Section Description>")
+
+For time-consuming processes, initiate the log with a start print, then use progress prints with end="", flush=True to indicate ongoing activity, but remove these progress prints once the process completes—retaining only the start and completion logs.
+
+If errors occur during script execution, they must be caught and printed with a UTC timestamp, clearly indicating that an error was encountered along with the section where it happened, for example:
+
+except Exception as e:
+    print(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] Error in <Section Description>: {e}")
+
+This format should be used consistently throughout the codebase for error handling and reporting.
+
+Do not include emojis, informal language, or custom separator lines in any prints. Maintain a concise, professional, and informative tone with consistent log formatting throughout the codebase. Avoid referencing transient variable values or previous execution context; prints should be clear to new readers and convey only relevant script execution context.

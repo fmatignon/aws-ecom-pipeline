@@ -16,22 +16,22 @@ from constructs import Construct
 
 
 class RDSStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, vpc=None, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # Tag all resources in this stack
         Tags.of(self).add("project", "ecom-pipeline")
 
-        # Create minimal VPC (no NAT Gateway - saves $32/month)
-        # RDS requires subnets in at least 2 AZs
-        vpc = ec2.Vpc(
-            self,
-            "EcomVpc",
-            max_azs=2,
-            nat_gateways=0,  # No NAT Gateway needed - RDS in public subnet
-            subnet_configuration=[
-                ec2.SubnetConfiguration(
-                    subnet_type=ec2.SubnetType.PUBLIC,
+        # Use provided VPC or create one (for backward compatibility)
+        if vpc is None:
+            vpc = ec2.Vpc(
+                self,
+                "EcomVpc",
+                max_azs=2,
+                nat_gateways=0,  # No NAT Gateway needed - RDS in public subnet
+                subnet_configuration=[
+                    ec2.SubnetConfiguration(
+                        subnet_type=ec2.SubnetType.PUBLIC,
                     name="Public",
                     cidr_mask=24,
                 ),
@@ -97,7 +97,7 @@ class RDSStack(Stack):
             deletion_protection=False,
             publicly_accessible=True,  # Public access - no NAT Gateway needed
             multi_az=False,
-            backup_retention=Duration.days(7),
+            backup_retention=Duration.days(1),  # Minimum 1 day for stability
         )
 
         # Outputs

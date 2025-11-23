@@ -1,6 +1,10 @@
 """
-Operations Stack for ECS Fargate task, Step Functions, and EventBridge
+Operations Stack for ECS Fargate task infrastructure.
+
+Creates the necessary AWS resources to run operations simulation tasks,
+including ECR repository, ECS cluster, task definition, and IAM roles.
 """
+
 from aws_cdk import (
     Stack,
     Duration,
@@ -11,14 +15,11 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_ecr as ecr,
     aws_iam as iam,
-    aws_stepfunctions as sfn,
-    aws_stepfunctions_tasks as tasks,
-    aws_events as events,
-    aws_events_targets as targets,
     aws_logs as logs,
 )
 from constructs import Construct
 from pathlib import Path
+import os
 
 
 class OperationsStack(Stack):
@@ -29,9 +30,9 @@ class OperationsStack(Stack):
         s3_bucket,
         rds_database,
         rds_secret,
-        vpc,
+        vpc=None,  # Optional - can get from RDS instance
         start_date: str = None,  # Optional START_DATE for initial run (YYYY-MM-DD)
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -39,9 +40,21 @@ class OperationsStack(Stack):
         Tags.of(self).add("project", "ecom-pipeline")
 
         # Get environment variables
-        bucket_name = s3_bucket.bucket_name if hasattr(s3_bucket, 'bucket_name') else s3_bucket
-        db_endpoint = rds_database.instance_endpoint.hostname if hasattr(rds_database, 'instance_endpoint') else None
-        secret_arn = rds_secret.secret_arn if hasattr(rds_secret, 'secret_arn') else None
+        bucket_name = (
+            s3_bucket.bucket_name if hasattr(s3_bucket, "bucket_name") else s3_bucket
+        )
+        db_endpoint = (
+            rds_database.instance_endpoint.hostname
+            if hasattr(rds_database, "instance_endpoint")
+            else None
+        )
+        secret_arn = (
+            rds_secret.secret_arn if hasattr(rds_secret, "secret_arn") else None
+        )
+
+        # Get VPC from parameter or RDS instance (for backward compatibility)
+        if vpc is None and hasattr(rds_database, "vpc"):
+            vpc = rds_database.vpc
 
         # Create ECR Repository
         ecr_repo = ecr.Repository(
@@ -58,6 +71,7 @@ class OperationsStack(Stack):
             "OperationsCluster",
             cluster_name="ecom-operations-cluster",
             vpc=vpc,
+            container_insights_v2=ecs.ContainerInsights.ENHANCED,  # Enable Container Insights with enhanced observability for detailed task-level metrics
         )
 
         # Create security group for ECS tasks
@@ -69,13 +83,8 @@ class OperationsStack(Stack):
             allow_all_outbound=True,
         )
 
-        # Allow RDS access
-        if hasattr(rds_database, 'connections'):
-            rds_database.connections.allow_from(
-                task_security_group,
-                ec2.Port.tcp(5432),
-                "Allow ECS tasks to connect to RDS"
-            )
+        # Note: RDS access is handled via Secrets Manager and IAM
+        # Security group ingress rules are configured in RDS stack for development access
 
         # Create task execution role
         task_execution_role = iam.Role(
@@ -96,9 +105,9 @@ class OperationsStack(Stack):
                     effect=iam.Effect.ALLOW,
                     actions=[
                         "secretsmanager:GetSecretValue",
-                        "secretsmanager:DescribeSecret"
+                        "secretsmanager:DescribeSecret",
                     ],
-                    resources=[secret_arn]
+                    resources=[secret_arn],
                 )
             )
 
@@ -109,8 +118,21 @@ class OperationsStack(Stack):
             assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
         )
 
+        # Grant Secrets Manager access to task role
+        if secret_arn:
+            task_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "secretsmanager:GetSecretValue",
+                        "secretsmanager:DescribeSecret",
+                    ],
+                    resources=[secret_arn],
+                )
+            )
+
         # Grant S3 access
-        if hasattr(s3_bucket, 'grant_read_write'):
+        if hasattr(s3_bucket, "grant_read_write"):
             s3_bucket.grant_read_write(task_role)
         else:
             # Fallback: grant permissions via policy
@@ -121,12 +143,12 @@ class OperationsStack(Stack):
                         "s3:GetObject",
                         "s3:PutObject",
                         "s3:DeleteObject",
-                        "s3:ListBucket"
+                        "s3:ListBucket",
                     ],
                     resources=[
                         f"arn:aws:s3:::{bucket_name}",
-                        f"arn:aws:s3:::{bucket_name}/*"
-                    ]
+                        f"arn:aws:s3:::{bucket_name}/*",
+                    ],
                 )
             )
 
@@ -134,10 +156,10 @@ class OperationsStack(Stack):
         task_role.add_to_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
-                actions=[
-                    "rds-db:connect"
+                actions=["rds-db:connect"],
+                resources=[
+                    f"arn:aws:rds-db:{self.region}:{self.account}:dbuser:*/ecomadmin"
                 ],
-                resources=[f"arn:aws:rds-db:{self.region}:{self.account}:dbuser:*/ecomadmin"]
             )
         )
 
@@ -154,7 +176,7 @@ class OperationsStack(Stack):
         task_definition = ecs.FargateTaskDefinition(
             self,
             "OperationsTaskDefinition",
-            memory_limit_mib=4096,
+            memory_limit_mib=16384,  # Increased from 8192 MiB (8 GB) to 16384 MiB (16 GB) to handle large data processing
             cpu=2048,
             execution_role=task_execution_role,
             task_role=task_role,
@@ -165,85 +187,15 @@ class OperationsStack(Stack):
             "OperationsContainer",
             image=ecs.ContainerImage.from_ecr_repository(ecr_repo, "latest"),
             logging=ecs.LogDrivers.aws_logs(
-                stream_prefix="operations",
-                log_group=log_group
+                stream_prefix="operations", log_group=log_group
             ),
             environment={
                 "S3_BUCKET_NAME": bucket_name,
-                "RDS_ENDPOINT": db_endpoint or "",
-                "RDS_DATABASE_NAME": "ecommerce",
                 "RDS_SECRET_ARN": secret_arn or "",
                 "AWS_DEFAULT_REGION": self.region,
-                **({"START_DATE": start_date} if start_date else {}),
             },
         )
 
-        # Create Step Functions state machine
-        # Define the workflow
-        run_task = tasks.EcsRunTask(
-            self,
-            "RunOperationsTask",
-            cluster=cluster,
-            task_definition=task_definition,
-            launch_target=tasks.EcsFargateLaunchTarget(
-                platform_version=ecs.FargatePlatformVersion.LATEST
-            ),
-            assign_public_ip=True,
-            security_groups=[task_security_group],
-            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            integration_pattern=sfn.IntegrationPattern.RUN_JOB,
-            result_path="$.taskResult",
-        )
-
-        # Add retry configuration
-        run_task.add_retry(
-            errors=["States.TaskFailed"],
-            interval=Duration.seconds(60),
-            max_attempts=2,
-            backoff_rate=2.0,
-        )
-
-        # Create state machine
-        state_machine = sfn.StateMachine(
-            self,
-            "OperationsStateMachine",
-            definition_body=sfn.DefinitionBody.from_chainable(run_task),
-            timeout=Duration.minutes(30),
-            logs=sfn.LogOptions(
-                destination=logs.LogGroup(
-                    self,
-                    "StateMachineLogGroup",
-                    log_group_name="/aws/stepfunctions/ecom-operations",
-                    retention=logs.RetentionDays.ONE_MONTH,
-                    removal_policy=RemovalPolicy.DESTROY,
-                ),
-                level=sfn.LogLevel.ALL,
-            ),
-        )
-
-        # Create EventBridge Rule (daily at 2 AM UTC)
-        rule = events.Rule(
-            self,
-            "OperationsScheduleRule",
-            schedule=events.Schedule.cron(
-                minute="0",
-                hour="2",
-                day="*",
-                month="*",
-                year="*"
-            ),
-            description="Daily trigger for operations simulation",
-        )
-
-        # Add Step Functions as target
-        rule.add_target(
-            targets.SfnStateMachine(state_machine)
-        )
-
-        # Grant EventBridge permission to invoke Step Functions
-        state_machine.grant_start_execution(
-            iam.ServicePrincipal("events.amazonaws.com")
-        )
 
         # Outputs
         CfnOutput(
@@ -253,31 +205,10 @@ class OperationsStack(Stack):
             description="ECR repository URI for operations Docker image",
         )
 
-        CfnOutput(
-            self,
-            "StateMachineArn",
-            value=state_machine.state_machine_arn,
-            description="Step Functions state machine ARN",
-        )
 
-        CfnOutput(
-            self,
-            "StateMachineName",
-            value=state_machine.state_machine_name,
-            description="Step Functions state machine name",
-        )
-
-        CfnOutput(
-            self,
-            "EventBridgeRuleArn",
-            value=rule.rule_arn,
-            description="EventBridge rule ARN",
-        )
-
-        # Store references
+        # Store references for other stacks
         self.ecr_repo = ecr_repo
         self.cluster = cluster
         self.task_definition = task_definition
-        self.state_machine = state_machine
-        self.rule = rule
-
+        self.task_security_group = task_security_group
+        self.vpc = vpc

@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "AWS Documentation": {
+      "command": "uvx awslabs.aws-documentation-mcp-server@latest",
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR",
+        "AWS_DOCUMENTATION_PARTITION": "aws"
+      },
+      "args": []
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "ctx7sk-dd466c9a-d53e-42e3-bd58-9fcb1aa68102"
+      }
+    },
+    "dbt": {
+      "command": "uvx",
+      "args": [
+        "dbt-mcp"
+      ],
+      "env": {
+        "DBT_HOST": "https://<your-dbt-host-with-custom-subdomain>",
+        "DBT_PROJECT_DIR": "/path/to/project",
+        "DBT_PATH": "/path/to/dbt/executable"
+      }
+    }
+  }
+}

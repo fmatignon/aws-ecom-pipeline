@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Always use context7 when code generation, setup or configuration steps, or library/API documentation is needed, except for AWS Documentation, which should be verified using the AWS Documentation mcp. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without requiring an explicit request, except in the case of AWS, where the AWS Documentation mcp should be used.

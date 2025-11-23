@@ -21,20 +21,14 @@ AWS_ACCOUNT_ID=your_aws_account_id
 # ============================================================================
 # RDS Database Configuration (Required AFTER infrastructure deployment)
 # ============================================================================
-# These values are needed to run the data loading script (source-systems/rds/load_to_rds.py)
-# 
-# After running 'cdk deploy', you'll get the RDS endpoint from the stack outputs.
-# The database credentials are stored in AWS Secrets Manager, but you can also
-# set them directly here for convenience.
+# These values are needed for both data generation (ECS) and local development.
 #
-# Option 1: Use Secrets Manager (recommended for production)
-# RDS_SECRET_ARN=arn:aws:secretsmanager:us-east-1:123456789012:secret:ecom-rds-credentials-xxxxx
+# After running 'cdk deploy', you'll get the RDS secret ARN from the stack outputs.
+# The data generation service (ECS) and ingestion pipeline both retrieve ALL database
+# credentials (host, port, database, username, password) from AWS Secrets Manager.
 #
-# Option 2: Set credentials directly (easier for development)
-RDS_ENDPOINT=your-rds-endpoint.region.rds.amazonaws.com
-RDS_DATABASE_NAME=ecommerce
-RDS_USERNAME=admin
-RDS_PASSWORD=your_password_here
+# Required: Set the RDS secret ARN (get this from CDK stack outputs after deployment)
+RDS_SECRET_ARN=arn:aws:secretsmanager:us-east-1:123456789012:secret:ecom-rds-credentials-xxxxx
 
 # ============================================================================
 # S3 Configuration (Optional - has defaults)
@@ -56,5 +50,18 @@ S3_BUCKET_NAME=aws-ecom-pipeline
 #
 # To use these APIs, you'll need the API Key ID from CDK outputs.
 # The API keys themselves are hardcoded in the Lambda functions for demo purposes.
+
+# ================================================================================
+# Optional Overrides
+# ================================================================================
+# Uncomment to reuse an existing payments/shipments API key secret instead
+# of letting the API stack create a new one automatically.
+# PAYMENTS_API_SECRET_NAME=ecom-payments-api-key
+# When supplying your own key via the reusable secret, ensure the value is alphanumeric
+# and at least 20 characters, e.g.:
+# PAYMENTS_API_SECRET_NAME=ecom-payments-api-key
+
+# Override default ingestion load type (FULL or INCREMENTAL)
+# LOAD_TYPE=INCREMENTAL
 ```
 
