@@ -51,7 +51,7 @@
                 }
             },
             "ResultPath": "$.ingestionResult",
-            "Next": "SuccessHandler",
+            "Next": "RunCrawlerTask",
             "Retry": [
                 {
                     "ErrorEquals": [
@@ -60,6 +60,34 @@
                     "IntervalSeconds": 30,
                     "MaxAttempts": 3,
                     "BackoffRate": 1.5
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "ResultPath": "$.error",
+                    "Next": "ErrorHandler"
+                }
+            ]
+        },
+        "RunCrawlerTask": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+            "Parameters": {
+                "Name": "${CrawlerName}"
+            },
+            "ResultPath": "$.crawlerResult",
+            "Next": "SuccessHandler",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.TaskFailed"
+                    ],
+                    "IntervalSeconds": 60,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2
                 }
             ],
             "Catch": [

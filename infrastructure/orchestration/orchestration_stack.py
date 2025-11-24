@@ -7,6 +7,7 @@ pipelines in sequential order.
 """
 
 from aws_cdk import (
+    Aws,
     Stack,
     Tags,
     CfnOutput,
@@ -39,6 +40,7 @@ class EcomOrchestrationStack(Stack):
         construct_id: str,
         operations_stack,
         ingestion_stack,
+        transformations_stack,
         **kwargs,
     ) -> None:
         """
@@ -49,6 +51,7 @@ class EcomOrchestrationStack(Stack):
             construct_id (str): Unique identifier for the stack.
             operations_stack: Deployed operations stack that exposes ECS resources.
             ingestion_stack: Deployed ingestion stack exposing the Lambda function.
+            transformations_stack: Stack that owns the Glue catalog crawler.
             **kwargs: Additional CDK Stack kwargs such as env.
         """
         super().__init__(scope, construct_id, **kwargs)
@@ -147,6 +150,18 @@ class EcomOrchestrationStack(Stack):
             )
         )
 
+        crawler_name = transformations_stack.crawler_name
+
+        state_machine_role.add_to_policy(
+            iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=["glue:GetCrawler", "glue:StartCrawler"],
+                resources=[
+                    f"arn:{Aws.PARTITION}:glue:{Aws.REGION}:{Aws.ACCOUNT_ID}:crawler/{crawler_name}"
+                ],
+            )
+        )
+
         # Get subnet IDs and security group IDs
         if hasattr(vpc, 'select_subnets'):
             subnet_ids = vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnet_ids
@@ -179,6 +194,7 @@ class EcomOrchestrationStack(Stack):
                 "EcsClusterArn": ecs_cluster.cluster_arn,
                 "TaskDefinitionArn": ecs_task_definition.task_definition_arn,
                 "IngestionFunctionArn": ingestion_lambda.function_arn,
+                "CrawlerName": crawler_name,
             },
             role=state_machine_role,
             logs=sfn.LogOptions(

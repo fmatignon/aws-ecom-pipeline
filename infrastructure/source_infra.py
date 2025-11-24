@@ -15,6 +15,7 @@ from api.api_stack import APIStack
 from operations.operations_stack import OperationsStack
 from ingestion.ingestion_stack import IngestionStack
 from orchestration.orchestration_stack import EcomOrchestrationStack
+from transformations.transformations_stack import EcomTransformationsStack
 
 # Load environment variables from .env file (in project root, one level up)
 env_path = Path(__file__).parent.parent / ".env"
@@ -80,12 +81,20 @@ ingestion_stack = IngestionStack(
     env=env,
 )
 
+transformations_stack = EcomTransformationsStack(
+    app,
+    "EcomTransformationsStack",
+    s3_bucket=s3_stack.bucket,
+    env=env,
+)
+
 # Create orchestration stack that coordinates operations and ingestion
 orchestration_stack = EcomOrchestrationStack(
     app,
     "EcomOrchestrationStack",
     operations_stack=operations_stack,
     ingestion_stack=ingestion_stack,
+    transformations_stack=transformations_stack,
     env=env,
 )
 
