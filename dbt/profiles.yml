@@ -1,0 +1,17 @@
+# Example dbt profile for Athena-based analytics work in this repo.
+# Adapt these values to your account/region before running `dbt`.
+ecom_athena:
+  target: dev
+  outputs:
+    dev:
+      type: athena
+      region_name: us-east-1
+      s3_staging_dir: s3://aws-ecom-pipeline/data/dbt-athena/staging
+      s3_data_dir: s3://aws-ecom-pipeline/data/dbt-athena/data
+      s3_data_naming: table_unique
+      database: AwsDataCatalog
+      schema: ecom_silver
+      threads: 4
+      num_retries: 3
+      aws_profile_name: default  # optional, remove if relying on env credentials
+

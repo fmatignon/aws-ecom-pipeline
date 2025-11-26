@@ -1,0 +1,18 @@
+# dbt profile for ECS container execution.
+# AWS credentials are provided by the ECS task IAM role, so no explicit
+# profile name or access keys are needed. Environment variables can override
+# region and S3 paths if required.
+ecom_athena:
+  target: dev
+  outputs:
+    dev:
+      type: athena
+      region_name: "{{ env_var('AWS_DEFAULT_REGION', 'us-east-1') }}"
+      s3_staging_dir: "{{ env_var('DBT_S3_STAGING_DIR', 's3://aws-ecom-pipeline/data/dbt-athena/staging') }}"
+      s3_data_dir: "{{ env_var('DBT_S3_DATA_DIR', 's3://aws-ecom-pipeline/data/dbt-athena/data') }}"
+      s3_data_naming: table_unique
+      database: AwsDataCatalog
+      schema: ecom_silver
+      threads: 4
+      num_retries: 3
+

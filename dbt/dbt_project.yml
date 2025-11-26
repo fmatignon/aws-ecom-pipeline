@@ -1,0 +1,38 @@
+# Root configuration for the dbt transformation workspace that ships with this pipeline.
+# Configures project settings, materializations, and folder paths for the silver/gold layer models.
+
+name: ecom_transformations
+version: "0.1.0"
+config-version: 2
+
+profile: ecom_athena
+require-dbt-version: [">=1.6.0"]
+
+model-paths: ["models"]
+analysis-paths: ["analysis"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  glue_database: ecom_bronze
+
+models:
+  ecom_transformations:
+    # Silver layer - staging models
+    staging:
+      +schema: ecom_silver
+      +materialized: incremental
+      +incremental_strategy: insert_overwrite
+      +partitioned_by: ['ingestion_date']
+      +on_schema_change: sync_all_columns
+      +file_format: parquet
+
+    # Gold layer - business models
+    gold:
+      +schema: ecom_gold
+      +materialized: table
+      +file_format: parquet

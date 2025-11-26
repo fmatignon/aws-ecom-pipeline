@@ -1,0 +1,4 @@
+# Requirements for running dbt locally with the Athena adapter.
+dbt-core == 1.7.0
+dbt-athena-community
+protobuf < 5

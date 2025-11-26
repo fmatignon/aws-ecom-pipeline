@@ -1,0 +1,1060 @@
+{
+    "metadata": {
+        "dbt_schema_version": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+        "dbt_version": "1.10.15",
+        "generated_at": "2025-11-26T09:42:58.380375Z",
+        "invocation_id": "4a228aa9-9488-4c90-b92b-b3b1223c26d5",
+        "invocation_started_at": "2025-11-26T09:42:28.897229Z",
+        "env": {}
+    },
+    "results": [
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:32.741884Z",
+                    "completed_at": "2025-11-26T09:42:32.747764Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:32.763811Z",
+                    "completed_at": "2025-11-26T09:42:35.941243Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 3.2100419998168945,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.accepted_values_stg_payments_payment_status__completed__failed__pending__refunded.db115b90b7",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nwith all_values as (\n\n    select\n        payment_status as value_field,\n        count(*) as n_records\n\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_payments\"\n    group by payment_status\n\n)\n\nselect *\nfrom all_values\nwhere value_field not in (\n    'completed','failed','pending','refunded'\n)\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:32.744232Z",
+                    "completed_at": "2025-11-26T09:42:32.761279Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:32.766895Z",
+                    "completed_at": "2025-11-26T09:42:35.942259Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 3.2101688385009766,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.accepted_values_stg_shipments_status__pending__in_transit__delivered__returned__cancelled__exception.3500f3ab88",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nwith all_values as (\n\n    select\n        status as value_field,\n        count(*) as n_records\n\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_shipments\"\n    group by status\n\n)\n\nselect *\nfrom all_values\nwhere value_field not in (\n    'pending','in_transit','delivered','returned','cancelled','exception'\n)\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:32.739384Z",
+                    "completed_at": "2025-11-26T09:42:32.748076Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:32.765425Z",
+                    "completed_at": "2025-11-26T09:42:35.957410Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 3.2260258197784424,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.accepted_values_stg_orders_payment_status__completed__failed__pending__refunded.5cf434fa8b",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nwith all_values as (\n\n    select\n        payment_status as value_field,\n        count(*) as n_records\n\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\n    group by payment_status\n\n)\n\nselect *\nfrom all_values\nwhere value_field not in (\n    'completed','failed','pending','refunded'\n)\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:32.733899Z",
+                    "completed_at": "2025-11-26T09:42:32.747454Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:32.748336Z",
+                    "completed_at": "2025-11-26T09:42:37.088000Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 4.356592893600464,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.accepted_values_stg_orders_order_status__processing__shipped__delivered__cancelled__pending__refunded.0125a491da",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nwith all_values as (\n\n    select\n        order_status as value_field,\n        count(*) as n_records\n\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\n    group by order_status\n\n)\n\nselect *\nfrom all_values\nwhere value_field not in (\n    'processing','shipped','delivered','cancelled','pending','refunded'\n)\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:35.945811Z",
+                    "completed_at": "2025-11-26T09:42:35.958658Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:35.959582Z",
+                    "completed_at": "2025-11-26T09:42:38.949981Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 3.005563259124756,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.dbt_utils_expression_is_true_order_facts_total_amount___0.50818b651c",
+            "compiled": true,
+            "compiled_code": "\n\nwith meet_condition as (\n    select * from \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"order_facts\" where 1=1\n)\n\nselect\n    *\nfrom meet_condition\n\nwhere not(total_amount >= 0)\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:35.969095Z",
+                    "completed_at": "2025-11-26T09:42:35.981792Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:35.982366Z",
+                    "completed_at": "2025-11-26T09:42:38.965146Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 2.9979817867279053,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_daily_metrics_day.bdeea9b0d7",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect day\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"daily_metrics\"\nwhere day is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:35.948635Z",
+                    "completed_at": "2025-11-26T09:42:35.958898Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:35.964005Z",
+                    "completed_at": "2025-11-26T09:42:39.004340Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 3.059546947479248,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_customer_360_customer_id.b69699741f",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect customer_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"customer_360\"\nwhere customer_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:37.090137Z",
+                    "completed_at": "2025-11-26T09:42:37.093160Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:37.093381Z",
+                    "completed_at": "2025-11-26T09:42:39.759276Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 2.670217990875244,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_order_facts_customer_id.6928662f74",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect customer_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"order_facts\"\nwhere customer_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:39.007105Z",
+                    "completed_at": "2025-11-26T09:42:39.010243Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:39.010526Z",
+                    "completed_at": "2025-11-26T09:42:41.841195Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 2.834951877593994,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_rfm_scores_customer_id.fc72e34870",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect customer_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"rfm_scores\"\nwhere customer_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:38.952107Z",
+                    "completed_at": "2025-11-26T09:42:38.955142Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:38.955354Z",
+                    "completed_at": "2025-11-26T09:42:41.953079Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 3.0017478466033936,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_order_facts_order_id.a08894dca3",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect order_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"order_facts\"\nwhere order_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:38.968642Z",
+                    "completed_at": "2025-11-26T09:42:38.982311Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:38.982744Z",
+                    "completed_at": "2025-11-26T09:42:41.966666Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 2.9995179176330566,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_product_catalog_product_id.bd2ef1ab99",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect product_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"product_catalog\"\nwhere product_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:39.761540Z",
+                    "completed_at": "2025-11-26T09:42:39.764551Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:39.764766Z",
+                    "completed_at": "2025-11-26T09:42:42.416530Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 2.6558032035827637,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_customers_customer_id.e2cfb1f9aa",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect customer_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_customers\"\nwhere customer_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:41.843043Z",
+                    "completed_at": "2025-11-26T09:42:41.845911Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:41.846123Z",
+                    "completed_at": "2025-11-26T09:42:44.605834Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 2.763643980026245,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_customers_email.d7cf761533",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect email\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_customers\"\nwhere email is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:41.969777Z",
+                    "completed_at": "2025-11-26T09:42:41.982244Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:41.982715Z",
+                    "completed_at": "2025-11-26T09:42:44.867629Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 2.8987908363342285,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_orders_order_id.81cfe2fe64",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect order_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\nwhere order_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:41.955024Z",
+                    "completed_at": "2025-11-26T09:42:41.958106Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:41.958332Z",
+                    "completed_at": "2025-11-26T09:42:44.873396Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 2.9191057682037354,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_orders_customer_id.af79d5e4b5",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect customer_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\nwhere customer_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:42.418389Z",
+                    "completed_at": "2025-11-26T09:42:42.421212Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:42.421420Z",
+                    "completed_at": "2025-11-26T09:42:45.334910Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 2.9173831939697266,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_payments_order_id.601cf57649",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect order_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_payments\"\nwhere order_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:44.607853Z",
+                    "completed_at": "2025-11-26T09:42:44.610719Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:44.610936Z",
+                    "completed_at": "2025-11-26T09:42:47.281661Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 2.674593210220337,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_payments_payment_id.c19cc50075",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect payment_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_payments\"\nwhere payment_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:44.869375Z",
+                    "completed_at": "2025-11-26T09:42:44.874648Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:44.875779Z",
+                    "completed_at": "2025-11-26T09:42:47.707332Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 2.8396286964416504,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_products_product_id.6373b0acf3",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect product_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_products\"\nwhere product_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:44.877926Z",
+                    "completed_at": "2025-11-26T09:42:44.896753Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:44.897267Z",
+                    "completed_at": "2025-11-26T09:42:47.708283Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 2.8315649032592773,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_shipments_order_id.2492ebf25a",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect order_id\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_shipments\"\nwhere order_id is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:45.337562Z",
+                    "completed_at": "2025-11-26T09:42:45.340856Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:45.341089Z",
+                    "completed_at": "2025-11-26T09:42:48.035850Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 2.6995882987976074,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.not_null_stg_shipments_tracking_number.9a8b484998",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\n\n\nselect tracking_number\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_shipments\"\nwhere tracking_number is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:47.283517Z",
+                    "completed_at": "2025-11-26T09:42:47.286923Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:47.287137Z",
+                    "completed_at": "2025-11-26T09:42:50.164415Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 2.8830788135528564,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.relationships_stg_orders_customer_id__customer_id__ref_stg_customers_.430bf21500",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nwith child as (\n    select customer_id as from_field\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\n    where customer_id is not null\n),\n\nparent as (\n    select customer_id as to_field\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_customers\"\n)\n\nselect\n    from_field\n\nfrom child\nleft join parent\n    on child.from_field = parent.to_field\n\nwhere parent.to_field is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:47.711729Z",
+                    "completed_at": "2025-11-26T09:42:47.723708Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:47.724516Z",
+                    "completed_at": "2025-11-26T09:42:50.426049Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 2.7154929637908936,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.relationships_stg_payments_order_id__order_id__ref_stg_orders_.8426a3f3d3",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nwith child as (\n    select order_id as from_field\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_payments\"\n    where order_id is not null\n),\n\nparent as (\n    select order_id as to_field\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\n)\n\nselect\n    from_field\n\nfrom child\nleft join parent\n    on child.from_field = parent.to_field\n\nwhere parent.to_field is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:47.717888Z",
+                    "completed_at": "2025-11-26T09:42:47.724165Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:47.726189Z",
+                    "completed_at": "2025-11-26T09:42:50.440439Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 2.740093946456909,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.relationships_stg_shipments_order_id__order_id__ref_stg_orders_.72607843d7",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nwith child as (\n    select order_id as from_field\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_shipments\"\n    where order_id is not null\n),\n\nparent as (\n    select order_id as to_field\n    from \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\n)\n\nselect\n    from_field\n\nfrom child\nleft join parent\n    on child.from_field = parent.to_field\n\nwhere parent.to_field is null\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:48.037691Z",
+                    "completed_at": "2025-11-26T09:42:48.042661Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:48.042875Z",
+                    "completed_at": "2025-11-26T09:42:50.849940Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 2.8130550384521484,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_customer_360_customer_id.932555fb9f",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    customer_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"customer_360\"\nwhere customer_id is not null\ngroup by customer_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:50.169903Z",
+                    "completed_at": "2025-11-26T09:42:50.172731Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:50.172962Z",
+                    "completed_at": "2025-11-26T09:42:52.949628Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 2.7809321880340576,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_daily_metrics_day.d99e44b8d8",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    day as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"daily_metrics\"\nwhere day is not null\ngroup by day\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:50.453195Z",
+                    "completed_at": "2025-11-26T09:42:50.456301Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:50.456610Z",
+                    "completed_at": "2025-11-26T09:42:53.246949Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 2.794611930847168,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_product_catalog_product_id.ad58ab5fa8",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    product_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"product_catalog\"\nwhere product_id is not null\ngroup by product_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:50.427916Z",
+                    "completed_at": "2025-11-26T09:42:50.431100Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:50.431353Z",
+                    "completed_at": "2025-11-26T09:42:53.252387Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 2.8251538276672363,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_order_facts_order_id.c795b5a146",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    order_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"order_facts\"\nwhere order_id is not null\ngroup by order_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:50.851893Z",
+                    "completed_at": "2025-11-26T09:42:50.855594Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:50.855811Z",
+                    "completed_at": "2025-11-26T09:42:53.744417Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 2.89342999458313,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_rfm_scores_customer_id.77b74062ce",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    customer_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_gold\".\"rfm_scores\"\nwhere customer_id is not null\ngroup by customer_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:52.952035Z",
+                    "completed_at": "2025-11-26T09:42:52.955094Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:52.955313Z",
+                    "completed_at": "2025-11-26T09:42:55.666696Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 2.715625047683716,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_stg_customers_customer_id.c7614daada",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    customer_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_customers\"\nwhere customer_id is not null\ngroup by customer_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:53.248775Z",
+                    "completed_at": "2025-11-26T09:42:53.256758Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:53.257078Z",
+                    "completed_at": "2025-11-26T09:42:55.936751Z"
+                }
+            ],
+            "thread_id": "Thread-3 (worker)",
+            "execution_time": 2.688997745513916,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_stg_orders_order_id.e3b841c71a",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    order_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_orders\"\nwhere order_id is not null\ngroup by order_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:53.254341Z",
+                    "completed_at": "2025-11-26T09:42:53.259501Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:53.259800Z",
+                    "completed_at": "2025-11-26T09:42:56.007208Z"
+                }
+            ],
+            "thread_id": "Thread-2 (worker)",
+            "execution_time": 2.7536239624023438,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_stg_payments_payment_id.3744510712",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    payment_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_payments\"\nwhere payment_id is not null\ngroup by payment_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:53.746484Z",
+                    "completed_at": "2025-11-26T09:42:53.749294Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:53.749507Z",
+                    "completed_at": "2025-11-26T09:42:56.652903Z"
+                }
+            ],
+            "thread_id": "Thread-1 (worker)",
+            "execution_time": 2.9075751304626465,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_stg_products_product_id.7d950a1467",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    product_id as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_products\"\nwhere product_id is not null\ngroup by product_id\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        },
+        {
+            "status": "pass",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2025-11-26T09:42:55.672422Z",
+                    "completed_at": "2025-11-26T09:42:55.676075Z"
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2025-11-26T09:42:55.676304Z",
+                    "completed_at": "2025-11-26T09:42:58.376065Z"
+                }
+            ],
+            "thread_id": "Thread-4 (worker)",
+            "execution_time": 2.7066659927368164,
+            "adapter_response": {
+                "_message": "OK -1",
+                "code": "OK",
+                "rows_affected": -1,
+                "data_scanned_in_bytes": 0
+            },
+            "message": null,
+            "failures": 0,
+            "unique_id": "test.ecom_transformations.unique_stg_shipments_tracking_number.0d339792ca",
+            "compiled": true,
+            "compiled_code": "\n    \n    \n\nselect\n    tracking_number as unique_field,\n    count(*) as n_records\n\nfrom \"AwsDataCatalog\".\"ecom_silver_ecom_silver\".\"stg_shipments\"\nwhere tracking_number is not null\ngroup by tracking_number\nhaving count(*) > 1\n\n\n",
+            "relation_name": null,
+            "batch_results": null
+        }
+    ],
+    "elapsed_time": 27.883458852767944,
+    "args": {
+        "log_path": "/Users/franciscomatignon/Documents/projects/aws-ecom/dbt/logs",
+        "source_freshness_run_project_hooks": true,
+        "populate_cache": true,
+        "require_batched_execution_for_custom_microbatch_strategy": false,
+        "vars": {},
+        "skip_nodes_if_on_run_start_fails": false,
+        "which": "test",
+        "use_colors_file": true,
+        "require_resource_names_without_spaces": true,
+        "log_level": "info",
+        "write_json": true,
+        "strict_mode": false,
+        "introspect": true,
+        "defer": false,
+        "partial_parse": true,
+        "exclude_resource_types": [],
+        "log_file_max_bytes": 10485760,
+        "show_resource_report": false,
+        "send_anonymous_usage_stats": true,
+        "upload_to_artifacts_ingest_api": false,
+        "warn_error_options": {
+            "error": [],
+            "warn": [],
+            "silence": []
+        },
+        "state_modified_compare_vars": false,
+        "quiet": false,
+        "favor_state": false,
+        "require_explicit_package_overrides_for_builtin_materializations": true,
+        "print": true,
+        "require_generic_test_arguments_property": true,
+        "cache_selected_only": false,
+        "require_all_warnings_handled_by_warn_error": false,
+        "state_modified_compare_more_unrendered_values": false,
+        "project_dir": "/Users/franciscomatignon/Documents/projects/aws-ecom/dbt",
+        "profiles_dir": "/Users/franciscomatignon/Documents/projects/aws-ecom/dbt",
+        "log_format_file": "debug",
+        "log_format": "default",
+        "invocation_command": "dbt test",
+        "partial_parse_file_diff": true,
+        "resource_types": [],
+        "printer_width": 80,
+        "indirect_selection": "eager",
+        "select": [],
+        "static_parser": true,
+        "version_check": true,
+        "validate_macro_args": false,
+        "log_level_file": "debug",
+        "show_all_deprecations": false,
+        "require_yaml_configuration_for_mf_time_spines": false,
+        "macro_debugging": false,
+        "exclude": [],
+        "require_nested_cumulative_type_params": false,
+        "use_colors": true,
+        "use_fast_test_edges": false
+    }
+}

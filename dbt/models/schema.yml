@@ -1,0 +1,271 @@
+# Schema definitions for sources and models including column documentation and data tests.
+version: 2
+
+sources:
+  - name: ecom_bronze
+    description: Bronze-tier tables cataloged by Glue so Athena/dbt-athena can read them.
+    database: AwsDataCatalog
+    schema: ecom_bronze
+    tables:
+      - name: customers
+        description: Raw customer records emitted by the operations service.
+        columns:
+          - name: customer_id
+            description: Primary key from the upstream Postgres source.
+          - name: email
+            description: Email address for notifications and segmentation.
+
+      - name: orders
+        description: Order history snapshots produced each run.
+        columns:
+          - name: order_id
+            description: Primary key for the order.
+          - name: customer_id
+            description: Foreign key to the customers table.
+
+      - name: payments
+        description: Payment records landing as Parquet files with hyphenated column names.
+        columns:
+          - name: payment-id
+            description: Primary key for the payment record.
+          - name: order-id
+            description: Foreign key to the orders table.
+
+      - name: products
+        description: Product catalog with pricing and category information.
+        columns:
+          - name: product_id
+            description: Primary key for the product.
+
+      - name: shipments
+        description: Shipment statuses recorded during operations runs.
+        columns:
+          - name: tracking_number
+            description: Primary key and unique tracking identifier.
+          - name: order_id
+            description: Foreign key to the orders table.
+
+models:
+  # Silver Layer - Staging Models
+  - name: stg_customers
+    description: Cleans the bronze customers table with normalization, deduplication, and QA flags.
+    columns:
+      - name: customer_id
+        description: Unique customer identifier.
+        tests:
+          - not_null
+          - unique
+      - name: email
+        description: Lowercased and trimmed email address.
+        tests:
+          - not_null
+      - name: is_valid_email
+        description: Boolean flag indicating if email passes regex validation.
+      - name: is_adult
+        description: Boolean flag indicating if customer is 18 or older based on date_of_birth.
+      - name: has_contact
+        description: Boolean flag indicating if customer has email or phone.
+      - name: _ingestion_ts
+        description: Snapshot timestamp for incremental loading.
+
+  - name: stg_orders
+    description: Formats bronze orders with normalization, deduplication, and QA flags.
+    columns:
+      - name: order_id
+        description: Order identifier emitted by the source system.
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Foreign key to stg_customers.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: order_status
+        description: Normalized order status (lowercase).
+        tests:
+          - accepted_values:
+              values: ['processing', 'shipped', 'delivered', 'cancelled', 'pending', 'refunded']
+      - name: payment_status
+        description: Normalized payment status (lowercase).
+        tests:
+          - accepted_values:
+              values: ['completed', 'failed', 'pending', 'refunded']
+      - name: is_paid
+        description: Boolean flag indicating if payment was successful.
+      - name: is_delivered
+        description: Boolean flag indicating if order was delivered.
+      - name: is_refunded
+        description: Boolean flag indicating if order was refunded.
+
+  - name: stg_payments
+    description: Cleans bronze payments with hyphenated-to-snake_case mapping and timestamp parsing.
+    columns:
+      - name: payment_id
+        description: Unique payment identifier.
+        tests:
+          - not_null
+          - unique
+      - name: order_id
+        description: Foreign key to stg_orders.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
+      - name: payment_status
+        description: Normalized payment status (lowercase).
+        tests:
+          - accepted_values:
+              values: ['completed', 'failed', 'pending', 'refunded']
+      - name: payment_date_parse_error
+        description: Boolean flag indicating if payment_date parsing failed.
+
+  - name: stg_products
+    description: Cleans bronze products with normalization and deduplication.
+    columns:
+      - name: product_id
+        description: Unique product identifier.
+        tests:
+          - not_null
+          - unique
+      - name: category
+        description: Product category (normalized to lowercase).
+      - name: sub_category
+        description: Product subcategory (normalized to lowercase).
+
+  - name: stg_shipments
+    description: Cleans bronze shipments with hyphenated-to-snake_case mapping and timestamp parsing.
+    columns:
+      - name: tracking_number
+        description: Unique tracking number identifier.
+        tests:
+          - not_null
+          - unique
+      - name: order_id
+        description: Foreign key to stg_orders.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
+      - name: status
+        description: Normalized shipment status.
+        tests:
+          - accepted_values:
+              values: ['pending', 'in_transit', 'delivered', 'returned', 'cancelled', 'exception']
+      - name: shipment_date_parse_error
+        description: Boolean flag indicating if shipment_date parsing failed.
+
+  # Gold Layer - Business Models
+  - name: order_facts
+    description: Comprehensive order view joining orders with latest payments and shipments.
+    columns:
+      - name: order_id
+        description: Order identifier (grain of the model).
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Foreign key to stg_customers.
+        tests:
+          - not_null
+      - name: total_amount
+        description: Total order amount.
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                severity: warn
+
+  - name: daily_metrics
+    description: Daily business KPIs aggregated from order_facts.
+    columns:
+      - name: day
+        description: Date grain of the metrics.
+        tests:
+          - not_null
+          - unique
+      - name: total_orders
+        description: Count of distinct orders for the day.
+      - name: total_revenue
+        description: Sum of total_amount for the day.
+      - name: avg_order_value
+        description: Average order value (total_revenue / total_orders).
+      - name: paid_orders
+        description: Count of orders with successful payment.
+      - name: delivered_orders
+        description: Count of orders that were delivered.
+
+  - name: customer_360
+    description: Customer lifetime view with aggregated metrics and preferences.
+    columns:
+      - name: customer_id
+        description: Customer identifier (grain of the model).
+        tests:
+          - not_null
+          - unique
+      - name: email
+        description: Customer email from stg_customers.
+      - name: first_order_date
+        description: Timestamp of customer first order.
+      - name: last_order_date
+        description: Timestamp of customer most recent order.
+      - name: total_orders
+        description: Lifetime order count.
+      - name: total_revenue
+        description: Lifetime revenue from customer.
+      - name: days_since_last_order
+        description: Days elapsed since last order.
+      - name: preferred_payment_method
+        description: Most frequently used payment method.
+      - name: preferred_shipping_carrier
+        description: Most frequently used shipping carrier.
+
+  - name: rfm_scores
+    description: RFM (Recency, Frequency, Monetary) scores for customer segmentation.
+    columns:
+      - name: customer_id
+        description: Customer identifier (grain of the model).
+        tests:
+          - not_null
+          - unique
+      - name: recency_days
+        description: Days since last order.
+      - name: frequency
+        description: Total number of orders.
+      - name: monetary
+        description: Total revenue from customer.
+      - name: r_score
+        description: Recency quintile score (1-5, higher is more recent).
+      - name: f_score
+        description: Frequency quintile score (1-5, higher is more frequent).
+      - name: m_score
+        description: Monetary quintile score (1-5, higher is more valuable).
+      - name: rfm_score_string
+        description: Concatenated RFM score (e.g., '555').
+      - name: rfm_score_numeric
+        description: Weighted RFM score (r*100 + f*10 + m).
+
+  - name: product_catalog
+    description: Clean product catalog view from stg_products.
+    columns:
+      - name: product_id
+        description: Unique product identifier.
+        tests:
+          - not_null
+          - unique
+      - name: product_name
+        description: Full product name.
+      - name: category
+        description: Product category.
+      - name: sub_category
+        description: Product subcategory.
+      - name: brand
+        description: Product brand.
+      - name: price
+        description: Product price.
+      - name: cost
+        description: Product cost.
